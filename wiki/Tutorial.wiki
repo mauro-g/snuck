@@ -50,8 +50,6 @@ The tool keeps a set of XSS vectors, that you can find in the directory named _p
 
 Obviously the tester is allowed to add vectors in these sets by just adding a new line. Furthermore, it is possible to employ a remote attack vectors repository instead of the local one, this can be done by starting the tool with the `-remotevectors` argument. The remote repository should be a URL whose content is the directory called `payloads` - for instance if the repository is reachable at http://www.example.com/repository/, then the tool will look for the four payload files in http://www.example.com/repository/payloads/.
 
-Note that in the case the tool detects the injection falls into an attribute `style` and the used browser is IE, it will ask the tester to switch the browser in compatibility mode before running the malicious test.
-
 === Howto and sample scenarios ===
 
 In the following section you'll find many typical scenarios, you might be interested to, in order to become familiar with the tool and especially with the use cases - XML configuration files - design. 
