@@ -44,7 +44,7 @@ Options :
 The tool keeps a set of XSS vectors, that you can find in the directory named _payloads_; this latter contains four files:
 
  * *html_payloads*. it stores HTML tags whose purpose is to generate an alert dialog window. Placeholders could be used within this set of vectors; for instance, if we had `<script src=data:,%alert%></script>`, then the tool will pick a JavaScript alert from the following attack vector set at random to be the substitute of `%alert%`. Something like `<svg onload=%uri%>` will be treated similarly, obviously the drawing will happen among the URIs vectors (see below).
- * *js_alert* payloads it stores many JavaScript approaches to trigger an alert dialog window, such as alert(1) or eval(alert(2)).
+ * *js_alert* payloads it stores many javascript approaches to trigger an alert dialog window, such as alert(1) or eval(alert(2)).
  * *uri_payloads* it stores malicious URIs, such as `javascript:alert(1)`.
  * *expression_alert_payloads* it stores malicious expression payloads, such as `expression(URL=0)`; in this case it is mandatory to produce a redirect to a new URL ending with "0" in order to catch whether a vulnerability exists. Unfortunately `expression(alert(1))` would flood the web browser (IE), while `expression(write(1))` makes the browser freeze, finally `expression(alert(URL=1))` produces multiple alert dialogs and this is annoying from the web driver's perspective.
 
