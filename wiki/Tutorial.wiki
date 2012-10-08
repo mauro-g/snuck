@@ -133,7 +133,7 @@ In the following section you'll find many typical scenarios, you might be intere
 > java -jar snuck.jar -config usecase.xml -report report.html -start login.xml
 }}}
 
- What will the tool do? Basically the tool will at first reverse engineer the HTML filter used against the user-supplied description, the it will start injecting multiple attack vectors and check whether an XSS is triggered - the important point here is that alert dialog window are grabbed in order to decide whether an injection is successful; this means that false positive rate is equal to 0 as a vulnerability is reported just in case an alert dialog window is grabbed by the used web browser (note that this is automatically performed).
+ What will the tool do? Basically the tool will at first reverse engineer the HTML filter used against the user-supplied description, the it will start injecting multiple attack vectors and check whether an XSS is triggered - the important point here is that alert dialog windows are grabbed in order to decide whether an injection is successful; this means that false positive rate is equal to 0 as a vulnerability is reported just in case an alert dialog window is grabbed by the used web browser (note that this is automatically performed).
 
  * *Scenario II: Stored XSS* Let us assume to have a blog, which allows visitors to leave comments. As in the previous case, our goal is to bypass the filter the web application is using against user generated content. Since the tool just need to fill some field and perform the attack, this is actually comparable to a fuzzy approach. See the following image for better understanding the context.
             http://www.sneaked.net/snuck/images/tutorial_II.png
