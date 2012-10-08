@@ -177,7 +177,7 @@ In the following section you'll find many typical scenarios, you might be intere
 java -jar snuck.jar -config usecase.xml -report report.html
 }}}
 
- * *Scenario III: Reflected XSS* Here we present a basic scenario in which the value of an HTTP GET parameter is reflected in a web page, in particular in the attribute `value` of an `input` element. As usual, we want to test whether injecting this parameter could result in a refected XSS vulnerability - see below for the XML configuration file and how it is possible to start _snuck_ - in this case we have two different opportunities.
+ * *Scenario III: Reflected XSS* Here we present a basic scenario in which the value of an HTTP GET parameter is reflected in a web page, in particular in the attribute `value` of an `input` element. As usual, we want to test whether injecting this parameter could result in a reflected XSS vulnerability - see below for the XML configuration file and how it is possible to start _snuck_ - in this case we have two different opportunities.
             http://www.sneaked.net/snuck/images/tutorial_III.png
 {{{
 <?xml version="1.0" encoding="UTF-8"?>
