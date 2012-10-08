@@ -7,7 +7,7 @@ The approach, it adopts, is based on the inspection of the injection's reflectio
 
 = Description =
 
-*snuck* is quite different from common modern web scanner, it basically tries to break a given XSS filter by specializing the injections in order to increase the success rate. The attack vectors are selected in a set on the casis of the reflection context, that is the exact point where the injection falls in the reflection web page's DOM. Having access to the pages' DOM is possible through Selenium WebDriver, which is an automation framework, that allows to replicate operations in web browsers.
+*snuck* is quite different from common modern web scanner, it basically tries to break a given XSS filter by specializing the injections in order to increase the success rate. The attack vectors are selected in a set on the casis of the reflection context, that is the exact point where the injection falls in the reflection web page's DOM. Having access to the pages' DOM is possible through Selenium Web Driver, which is an automation framework, that allows to replicate operations in web browsers.
 Since many steps could be involved before an XSS filter is activated, an XML configuration file should be filled in order to make _snuck_ aware of the steps it needs to perform with respect to the tested web application. Practically speaking, the approach is similar to the [http://www.korscheck.de/diploma-thesis.pdf iSTAR]'s one, but it focuses on one particular XSS filter.
 
 
