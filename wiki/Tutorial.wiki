@@ -175,12 +175,12 @@ In the following section you'll find many typical scenarios, you might be intere
             <command>
                 <name>type</name>
                 <target>name=name</target>
-                <value${USERNAME}</value>
+                <value>${USERNAME}</value>
            </command>                                                                                      
             <command>
                 <name>type</name>
                 <target>id=comment</target>
-                <value${INJECTION}</value>
+                <value>${INJECTION}</value>
            </command>
            <command>
                 <name>click</name>
@@ -194,9 +194,10 @@ In the following section you'll find many typical scenarios, you might be intere
 {{{ 
 java -jar snuck.jar -config usecase.xml -report report.html
 }}}
+ The remarkable points here are that variables can be defined through the `<parameter>` tags and referenced by using strings in the form of `${variable_name}`. In addition you can use `${RANDOM}` or `${RANDOM_EMAIL} `within `<value>` tags for asking the tool to supply a random alphanumeric string or a random email. 
 
- * *Scenario III: Reflected XSS* Here we present a basic scenario in which the value of an HTTP GET parameter is reflected in a web page, in particular in the attribute `value` of an `input` element. As usual, we want to test whether injecting this parameter could result in a reflected XSS vulnerability - see below for the XML configuration file and how it is possible to start _snuck_ - in this case we have two different opportunities.
-            http://www.sneaked.net/snuck/images/tutorial_III.png
+ * *Scenario III: Reflected XSS* Here we present a basic scenario in which the value of an HTTP GET parameter is reflected in a web page, in particular in the attribute `value` of an `input` element, whose `type` is setted to `hidden`. As usual, we want to test whether injecting this parameter could result in a reflected XSS vulnerability - see below for the XML configuration file and how it is possible to start _snuck_ - in this case we have two different opportunities.
+ http://www.sneaked.net/snuck/images/tutorial_III.png
 {{{
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
@@ -217,5 +218,6 @@ java -jar snuck.jar -config usecase.xml -report report.html
 # faster mode (no XML file required)
 > java -jar snuck.jar -report report.html -reflected "http://example.com/xss.php?foo=bar" -p param
 }}}
+ Note that the `<reflectionurl>` can be used for asking the tool to make the injections at `<targeturl>` and to look for reflections at the URL defined with `<reflectionurl>`.
 
 *Further information* Sometimes it might be useful to discover the first successful injection without realizing a complete test. This task could be achieved through the argument `-stop-first`, which makes the tool stop at the first positive, it will find. In addition, you could obviously stop the test through CTRL+C, if so, then the tool will print in stdout the successful injections that it found so far.
