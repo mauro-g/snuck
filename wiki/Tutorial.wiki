@@ -41,11 +41,11 @@ Usage: snuck [-start xmlconfigfile ] -config xmlconfigfile -report htmlreportfil
 
 Options :
 
-  -start         path to login use case (XML file )
-  -config        path to injection use case (XML file )
-  -report        report file name ( html extension is required )
+  -start         path to login use case (XML file)
+  -config        path to injection use case (XML file)
+  -report        report file name (html extension is required)
   -d             delay (ms) between each injection
-  -proxy         proxy server (IP: port )
+  -proxy         proxy server (IP: port)
   -chrome        perform a test with Google Chrome, instead of Firefox. It needs the path to the chromedriver
   -ie            perform a test with Internet Explorer, instead of Firefox.
                  Disable the built in XSS filter in advance
