@@ -7,14 +7,32 @@ The approach, it adopts, is based on the inspection of the injection's reflectio
 
 = Description =
 
-*snuck* is quite different from common modern web scanner, it basically tries to break a given XSS filter by specializing the injections in order to increase the success rate. The attack vectors are selected on the basis of the reflection context, that is the exact point where the injection falls in the reflection web page's DOM. Having access to the pages' DOM is possible through Selenium Web Driver, which is an automation framework, that allows to replicate operations in web browsers.
-Since many steps could be involved before an XSS filter is activated, an XML configuration file should be filled in order to make _snuck_ aware of the steps it needs to perform with respect to the tested web application. Practically speaking, the approach is similar to the [http://www.korscheck.de/diploma-thesis.pdf iSTAR]'s one, but it focuses on one particular XSS filter.
+*snuck* is quite different from typical web security scanners, it basically tries to break a given XSS filter by specializing the injections in order to increase the success rate. The attack vectors are selected on the basis of the reflection context, that is the exact point where the injection falls in the reflection web page's DOM. Having access to the pages' DOM is possible through Selenium Web Driver, which is an automation framework, that allows to replicate operations in web browsers.
+Since many steps could be involved before an XSS filter is "activated", an XML configuration file should be filled in order to make _snuck_ aware of the steps it needs to perform with respect to the tested web application. Practically speaking, the approach is similar to the [http://www.korscheck.de/diploma-thesis.pdf iSTAR]'s one, but it focuses on one particular XSS filter.
 
+=== Download and first run ===
 
-Note: before running a test in Google Chrome, you should download the appropriate server, which is a bridge between the web browser and the driver - refer to http://code.google.com/p/chromedriver/downloads/list. A similar procedure is required for Internet Explorer too, refer to http://code.google.com/p/selenium/downloads/list.
-Obviously since the tool is written in Java, you can run it in any platform, you just need to download the web browser at first.
+*snuck* is an open-source software written in Java, released under the Apache 2.0 license, you can download the sources by using svn.
 
-*snuck* adopts a command line interface, here follow the available options and the correspondent descriptions.
+{{{
+svn checkout http://snuck.googlecode.com/svn/trunk/ snuck-read-only
+}}}
+
+Once checked out, you can use the build.xml file for asking Ant to compile the source files and generate the jar file.
+
+{{{
+cd snuck-read-only
+ant jar
+}}}
+
+This will generate an executable jar file that is ready to run! 
+
+You can also directly download a ready-to-run executable jar from [http://code.google.com/p/snuck/downloads/detail?name=snuck.zip here]. 
+
+Note: No particular prerequisites are required, in particular you just need a working JVM and Firefox installed. Furthermore, if you want to run a test with Google Chrome/Chromium, you should download the appropriate server, which is a bridge between the web browser and the driver - refer to http://code.google.com/p/chromedriver/downloads/list. A similar procedure is required for Internet Explorer too, refer to http://code.google.com/p/selenium/downloads/list.
+Obviously since the tool is written in Java, you can run it in any platform.
+
+Once you downloaded/generated the jar file, you will need to become familiar with the command line options, here follow the available arguments and the correspondent description.
 {{{
 >java -jar snuck.jar
 Usage: snuck [-start xmlconfigfile ] -config xmlconfigfile -report htmlreportfile [-d # ms_delay] 
