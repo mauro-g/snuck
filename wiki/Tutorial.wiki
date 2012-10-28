@@ -27,7 +27,7 @@ ant jar
 
 This will generate an executable jar file that is ready to run! 
 
-You can also directly download a ready-to-run executable jar from [http://code.google.com/p/snuck/downloads/detail?name=snuck.zip here]. 
+You can also directly download a ready-to-run executable jar from [http://code.google.com/p/snuck/downloads/detail?name=snuck-0.1.zip here]. 
 
 Note: No particular prerequisites are required, in particular you just need a working JVM and Firefox installed. Furthermore, if you want to run a test with Google Chrome/Chromium, you should download the appropriate server, which is a bridge between the web browser and the driver - refer to http://code.google.com/p/chromedriver/downloads/list. A similar procedure is required for Internet Explorer too, refer to http://code.google.com/p/selenium/downloads/list.
 Obviously since the tool is written in Java, you can run it in any platform.
@@ -53,7 +53,7 @@ Options :
   -stop-first    stop the test upon a successful vector is detected
   -no-multi      deactivate multithreading for the reverse engineering process - a sequential approach will be adopted
   -reflected     perform a reflected XSS test (without writing the XML config file)
-  -p             HTTP GET parameter to inject (useful if -reflected is setted)
+  -p             HTTP GET parameter to inject (useful if -reflected is set)
   -help          show this help menu 
 }}}
 
