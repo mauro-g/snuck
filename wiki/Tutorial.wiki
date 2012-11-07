@@ -29,7 +29,7 @@ This will generate an executable jar file that is ready to run!
 
 You can also directly download a ready-to-run executable jar from [http://code.google.com/p/snuck/downloads/detail?name=snuck-0.1.zip here]. 
 
-Note: No particular prerequisites are required, in particular you just need a working JVM and Firefox installed. Furthermore, if you want to run a test with Google Chrome/Chromium, you should download the appropriate server, which is a bridge between the web browser and the driver - refer to http://code.google.com/p/chromedriver/downloads/list. A similar procedure is required for Internet Explorer too, refer to http://code.google.com/p/selenium/downloads/list.
+Note: No particular prerequisites are required, in particular you just need a working JVM and Firefox installed. Furthermore, if you want to run a test with Google Chrome/Chromium, you should download the appropriate server, which is a bridge between the web browser and the driver - refer to http://code.google.com/p/chromedriver/downloads/list. A similar procedure is required for Internet Explorer too, refer to http://code.google.com/p/selenium/downloads/list. The tool has been tested with IE9 and has proven to work successfully; some issues could possibly appear with older versions of IE, but we are working to make snuck compatible with these too.
 Obviously since the tool is written in Java, you can run it in any platform.
 
 Once you downloaded/generated the jar file, you will need to become familiar with the command line options, here follow the available arguments and the correspondent description.
