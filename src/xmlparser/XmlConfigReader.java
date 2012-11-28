@@ -29,6 +29,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 
@@ -389,7 +390,7 @@ public class XmlConfigReader {
 	
 	public static String generateReflectedConfigFile(String targetURL, String targetParam) {
 		URL tmp = null;
-		Map<String, String> parameters = null;
+		LinkedList<String> parameters = null;
 		String params = "";
 		
 		try {
@@ -402,9 +403,9 @@ public class XmlConfigReader {
 		if (tmp.getQuery() != null){
 			parameters = getQueryMap(tmp.getQuery());
 				
-			for (String key : parameters.keySet()) {  
+			for (String p : parameters) {  
 				params += "			<parameter>" +
-							key + ( parameters.get(key) == null ? "" : "=" + parameters.get(key) );
+							p.split("=")[0] + ( p.split("=")[1].equals("") ? "" : "=" + p.split("=")[1] );
 				params += "</parameter>\n";
 			}  
 		}
@@ -420,9 +421,9 @@ public class XmlConfigReader {
 				"</root>\n";
 	}
 	
-	public static Map<String, String> getQueryMap(String query) {  
+	public static LinkedList<String> getQueryMap(String query) {  
 	    String[] params = query.split("&");  
-	    Map<String, String> map = new HashMap<String, String>();  
+	    LinkedList<String> parameters = new LinkedList<String>();
 	    
 	    for (String param : params) {  
 	        String name = param.split("=")[0];  
@@ -430,8 +431,8 @@ public class XmlConfigReader {
 	        if (param.split("=").length == 2)
 	        	value = param.split("=")[1];  
 	        
-	        map.put(name, value);  
+	        parameters.add(name + "=" + ( (value == null) ? "" : value ) );  
 	    }  
-	    return map;  
+	    return parameters;  
 	}
 }
