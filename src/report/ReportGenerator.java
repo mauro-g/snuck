@@ -33,7 +33,7 @@ public class ReportGenerator {
 	 public static void generateReport(String reportFileName, String XMLconfigFile, String InUseBrowser, 
 			 String reflectionContext, int operation, Map<String, List<String>> allowedElements, 
 			 List<String> allowedProtocols, List<String> detectedXSSVectors, 
-			 boolean weakFilter, boolean brokenPage) {
+			 boolean weakFilter, boolean brokenPage, int method) {
 		 
 		 try{
 			 FileWriter fstream = new FileWriter(reportFileName);
@@ -42,8 +42,30 @@ public class ReportGenerator {
 			 out.write("<html>");
 			 out.write("<head>" +
 			 "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />" +
-			 "<title>Test results</title>" +
-			 "<style type=\"text/css\">" +
+			 "<title>Test results</title>");
+			 
+			 if (method == 1){
+				 out.write("<script>" +
+				 "var escape_flag = 0;" +
+				 "function flipUrlEncoding(){" +
+				 "	var z = document.getElementsByName('vector');" +
+				 "	var i;" +
+				 "	if (escape_flag == 0){" +
+				 "		for (i = 0; i < z.length; i++){" +
+			     "			z[i].innerHTML = encodeURIComponent(z[i].innerHTML.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')).replace(/%5BCRLF%5D/g,'%0D%0A');" +
+				 "		}" +
+				 "		escape_flag = 1;" +
+				 "	}else {" +
+				 "	   for (i = 0; i < z.length; i++){" +
+				 "			z[i].innerHTML = decodeURIComponent(z[i].innerHTML.replace(/%0D%0A/g,'%5BCRLF%5D')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');" +
+				 "		}" +
+				 "		escape_flag = 0;" +
+				 "	}" +
+				 "}" +
+				 "</script>");
+			 }
+			 
+			 out.write("<style type=\"text/css\">" +
 			 			"body" +
 				 		"{ 	line-height: 1.4em; }" +
 						"" +
@@ -250,7 +272,7 @@ public class ReportGenerator {
 			out.write("<table id=\"hor-minimalist-b\">" +
 			"   <thead>" +
 			"	  	<tr>" +
-			"       	<th scope=\"col\">Detected XSS</th>" +
+			"       	<th scope=\"col\">Detected XSS " + (method == 1 ? "[<a href=\"#\" onclick=\"flipUrlEncoding();\">URL (e|de)ncode vectors</a>]" : "") + "</th>" +
 			"        </tr>" +
 			"   </thead>" +
 			"   <tbody>");
@@ -258,7 +280,7 @@ public class ReportGenerator {
 			if (detectedXSSVectors.size() != 0){
 				for (String t : detectedXSSVectors){
 					out.write("<tr>");
-					out.write("<td>" + t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\r\n", "[CRLF]") + "</td>");
+					out.write("<td name=\"vector\">" + t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\r\n", "[CRLF]") + "</td>");
 					out.write("</tr>");
 				}
 				if (weakFilter) {

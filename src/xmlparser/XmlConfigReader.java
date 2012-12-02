@@ -112,6 +112,10 @@ public class XmlConfigReader {
 	// method => 1 stands for reflected, 2 stands for stored, 0 stands for error
 	private int method = 0;
 	
+	public int getMethod() {
+		return this.method;
+	}
+	
 	public XmlConfigReader(String xmlConfigFile_Name) {
 		factory = DocumentBuilderFactory.newInstance();
 		xmlFilename = xmlConfigFile_Name;

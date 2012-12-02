@@ -168,7 +168,7 @@ public class Starter  {
     	
     	report.ReportGenerator.generateReport(parseArgs.getReportfileName(), parseArgs.getConfigfileName(), 
     											usedBrowser, reflectionContext, operation, allowedElements, 
-    											allowedProtocols, detectedXSSVectors, weakFilter, false);
+    											allowedProtocols, detectedXSSVectors, weakFilter, false, xmlConfig.getMethod());
     	
     	Debug.print("\nThe malicious test has finished. A report has been generated: " + parseArgs.getReportfileName());
 
@@ -890,7 +890,7 @@ public class Starter  {
 		if (reflectionContext != null) {
 			report.ReportGenerator.generateReport(parseArgs.getReportfileName(), parseArgs.getConfigfileName(), usedBrowser, 
 													reflectionContext, operation, allowedElements, allowedProtocols, detectedXSSVectors, 
-													false, true);
+													false, true, xmlConfig.getMethod());
 	    	Debug.print("\nA report has been generated: " + parseArgs.getReportfileName());
 		}
 		
@@ -910,7 +910,7 @@ public class Starter  {
 		if (reflectionContext != null) {
 			report.ReportGenerator.generateReport(parseArgs.getReportfileName(), parseArgs.getConfigfileName(), usedBrowser, 
 													reflectionContext, operation, allowedElements, allowedProtocols, detectedXSSVectors, 
-													false, false);
+													false, false, xmlConfig.getMethod());
 	    	Debug.print("\n\nJust broken the tested XSS filter! \nA report has been generated: " + parseArgs.getReportfileName());
 		}
 		
