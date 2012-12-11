@@ -226,10 +226,7 @@ public class CmdArgsParser {
 		            	if (i != args.length - 1 && !args[i+1].startsWith("-")) {
 		            		targetParam = args[i+1];
 		                	i++;
-		            	} else {
-		            		Debug.printError("ERROR: -p requires an HTTP GET parameter");
-		                    HaltHandler.quit_nok();
-		                }
+		            	} 
 		            } else if (arg.equals("-no-multi")){
 		            	delay = 1;
 		            } else {
@@ -240,8 +237,11 @@ public class CmdArgsParser {
 			}
 			
 			if (targetURL != null && targetParam == null){
-				Debug.printError("ERROR: -reflected must be associated to an HTTP GET parameter (-p argument)");
-                HaltHandler.quit_nok();
+				Debug.printError("INFO: -reflected should be associated to an HTTP GET parameter (-p argument).\n" +
+								 "\tThe injection will be positioned at the end of the current path in the form of: http://target.foo/injection.\n" +
+								 "\tNote that supplied HTTP GET parameters won't be considered.");
+                
+				writeXmlFile(targetURL, "");    
 			} else if (targetURL == null && targetParam != null){
 				Debug.printError("ERROR: -p must be associated to a target URL (-reflected argument)");
                 HaltHandler.quit_nok();
@@ -251,29 +251,7 @@ public class CmdArgsParser {
 	                HaltHandler.quit_nok();
 				}
 				
-				String temp_conf_file = XmlConfigReader.generateReflectedConfigFile(targetURL, targetParam);
-				DateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy-HH-mm-ss");
-				Date date = new Date();
-				FileWriter fstream = null;
-				BufferedWriter out =  null;
-				configfile = "config_" + dateFormat.format(date).toString() + ".xml";
-				
-				try {
-					fstream = new FileWriter(configfile);
-				} catch (IOException e) {
-					Debug.printError("ERROR: unable to create the XML config file");
-	                HaltHandler.quit_nok();
-				}
-				
-				out = new BufferedWriter(fstream);
-				
-				try {
-					out.write(temp_conf_file);
-					out.close();
-				} catch (IOException e) {
-					Debug.printError("ERROR: unable to write the XML config file");
-	                HaltHandler.quit_nok();
-				}
+				writeXmlFile(targetURL, targetParam);
 			}
 			
 			if (configfile == null || reportfile == null) {
@@ -287,6 +265,32 @@ public class CmdArgsParser {
 		}
     }
 
+	private void writeXmlFile(String targetURL, String targetParam){
+		String temp_conf_file = XmlConfigReader.generateReflectedConfigFile(targetURL, targetParam);
+		DateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy-HH-mm-ss");
+		Date date = new Date();
+		FileWriter fstream = null;
+		BufferedWriter out =  null;
+		configfile = "config_" + dateFormat.format(date).toString() + ".xml";
+		
+		try {
+			fstream = new FileWriter(configfile);
+		} catch (IOException e) {
+			Debug.printError("ERROR: unable to create the XML config file");
+            HaltHandler.quit_nok();
+		}
+		
+		out = new BufferedWriter(fstream);
+		
+		try {
+			out.write(temp_conf_file);
+			out.close();
+		} catch (IOException e) {
+			Debug.printError("ERROR: unable to write the XML config file");
+            HaltHandler.quit_nok();
+		}
+	}
+	
 	private void showHelpMessage() {
 		Debug.print();
 		Debug.print("Usage: ");
