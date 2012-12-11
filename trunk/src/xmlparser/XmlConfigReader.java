@@ -182,12 +182,20 @@ public class XmlConfigReader {
 		return getTextContentByName("reflectionurl");
 	}
 	
+	boolean empty_paramtoinject_flag = false;
 	private String GetParamToInject(){
 		String param = getTextContentByName("paramtoinject");
 		
 		if (param == null){
-			Debug.printError("ERROR: missing <paramtoinject> ( " + xmlFilename + " )");
+			Debug.printError("ERROR: missing <paramtoinject> ( " + xmlFilename + " ).");
 			HaltHandler.quit_nok();
+		}
+		
+		if (param.equals("") && !empty_paramtoinject_flag){
+			String t_url = GetTargetUrl();
+			Debug.print("INFO: <paramtoinject> is empty ( " + xmlFilename + " ). " +
+						"Injecting in the form of: " + ( t_url.endsWith("/") ? t_url : t_url + "/" ) + "injection");
+			empty_paramtoinject_flag = true;
 		}
 		
 		return param;
@@ -226,7 +234,10 @@ public class XmlConfigReader {
 			String target_url = "";
 			
 			try {
-				target_url = getCompleteTargetURL() + "&" + GetParamToInject() + "=" + URLEncoder.encode(injection, "UTF-8");
+				if (GetParamToInject().equals("")){
+					target_url = ( GetTargetUrl().endsWith("/") ? GetTargetUrl() : GetTargetUrl() + "/" ) + URLEncoder.encode(injection, "UTF-8");
+				} else 
+					target_url = getCompleteTargetURL() + "&" + GetParamToInject() + "=" + URLEncoder.encode(injection, "UTF-8");
 			} catch (UnsupportedEncodingException e) {
 				Debug.printError("\nERROR: unable to encode the target URL");
 				HaltHandler.quit_nok();
