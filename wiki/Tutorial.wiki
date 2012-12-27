@@ -15,14 +15,14 @@ Since many steps could be involved before an XSS filter is "activated", an XML c
 *snuck* is an open-source software written in Java, released under the Apache 2.0 license, you can download the sources by using svn.
 
 {{{
-svn checkout http://snuck.googlecode.com/svn/trunk/ snuck
+>svn checkout http://snuck.googlecode.com/svn/trunk/ snuck
 }}}
 
 Once checked out, you can use the build.xml file for asking Ant to compile the source files and generate the jar file.
 
 {{{
-cd snuck
-ant jar
+>cd snuck
+>ant jar
 }}}
 
 This will generate an executable jar file that is ready to run! 
