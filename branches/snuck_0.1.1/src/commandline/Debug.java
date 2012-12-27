@@ -54,8 +54,8 @@ public class Debug {
 	}
 
 	public static boolean askForContext(String reflContext) {
-		Debug.print("\nINFO: detected reflection context: " + reflContext);
-		Debug.print("Do you want to consider this one for specializing the injection? [Y/n]");
+		Debug.print("\nINFO: reflection context: " + reflContext);
+		Debug.print("Do you want to consider this one for specializing the injections? [Y/n]");
 		String input = Debug.readLine();
 		
 		if (input != null && !input.equals("N") && !input.equals("n"))

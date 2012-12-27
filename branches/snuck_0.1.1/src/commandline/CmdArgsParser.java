@@ -310,7 +310,7 @@ public class CmdArgsParser {
 		Debug.print(" -stop-first\t stop the test upon a successful vector is detected");
 		Debug.print(" -no-multi\t deactivate multithreading for the reverse engineering process - a sequential approach will be adopted");
 		Debug.print(" -reflected\t perform a reflected XSS test (without writing the XML config file)");
-		Debug.print(" -p\t\t HTTP GET parameter to inject (useful if -reflected is setted)");
+		Debug.print(" -p\t\t HTTP GET parameter to inject (useful if -reflected is set)");
 		Debug.print(" -help\t\t show this help menu");
 	}
 		

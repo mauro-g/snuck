@@ -50,6 +50,7 @@ import org.xml.sax.SAXException;
 
 import commandline.Debug;
 import commandline.HaltHandler;
+import core.Inject;
 import core.Starter;
 
 /**
@@ -220,6 +221,31 @@ public class XmlConfigReader {
     	}
 	}
 	
+	private void NavigateTo(WebDriver driver, String url) {
+		NavigateTo(driver, url, 0);
+	}
+	
+	private void NavigateTo(WebDriver driver, String url, int recursion_count) {
+		if (recursion_count >= 2) {
+			Debug.printError("\nERROR: unable to continue the injection process");
+			HaltHandler.quit_nok();
+		}
+		
+		try {
+			driver.get(url);
+		} catch (UnhandledAlertException e){
+
+			Inject.getAlertsWithTimeout(null, false);
+			// the driver has probably changed!
+			NavigateTo(Starter.getDriver(), url, recursion_count++);
+	    // IE can trigger a WebDriverException instead of the UnhandledAlertException upon blocked by alert dialog windows
+	    } catch (WebDriverException e){
+			Inject.getAlertsWithTimeout(null, false);
+			// the driver has probably changed!
+			NavigateTo(Starter.getDriver(), url, recursion_count++);
+	    }
+    }
+	
 	public void commonInject(final WebDriver driver, String injection, int delay){
 		if (delay != 0){
 			try {
@@ -264,14 +290,14 @@ public class XmlConfigReader {
 				 */
 				if (Starter.getCurrentBrowser() != null && Starter.getCurrentBrowser().contains("Chrome") && ( GetReflectionUrl() == null || GetReflectionUrl().equals("") ) ){
 					try {
-						driver.get("data:text/html,<a href='" + URLEncoder.encode(target_url, "UTF-8") + "'>go</click>");
+						NavigateTo(driver, "data:text/html,<a href='" + URLEncoder.encode(target_url, "UTF-8") + "'>go</click>");
 					} catch (UnsupportedEncodingException e) {
 						Debug.printError("\nERROR: unable to encode the target URL");
 						HaltHandler.quit_nok();
 					}
 			   		driver.findElements(By.xpath("//a")).get(0).click();
 				} else			
-					driver.get(target_url);
+					NavigateTo(driver, target_url);
 
 			} catch (UnhandledAlertException e) {
 				Starter.refreshDriver();
@@ -281,18 +307,18 @@ public class XmlConfigReader {
 				Debug.printError("\nINFO: an alert dialog window was blocking the injection process, starting a new driver...");
 			}
 						
-			// <reflectionurl> is setted
+			// <reflectionurl> is set
 			if (GetReflectionUrl() != null && !GetReflectionUrl().equals("")){
 				if (Starter.getCurrentBrowser() != null && Starter.getCurrentBrowser().contains("Chrome")){
 					try {
-						driver.get("data:text/html,<a href='" + URLEncoder.encode(target_url, "UTF-8") + "'>go</click>");
+						NavigateTo(driver, "data:text/html,<a href='" + URLEncoder.encode(target_url, "UTF-8") + "'>go</click>");
 					} catch (UnsupportedEncodingException e) {
 						Debug.printError("\nERROR: unable to encode the target URL");
 						HaltHandler.quit_nok();
 					}
 					driver.findElements(By.xpath("//a")).get(0).click();
 				} else 
-					driver.get(GetReflectionUrl());
+					NavigateTo(driver, GetReflectionUrl());
 			}
 			
 		} else if (method == 2){
@@ -330,20 +356,12 @@ public class XmlConfigReader {
 				
 					if (name.equals("open")){		
 						
-						try {
-							if  (value.equals("noforce")){
-								if (!stripFragmentFromCurrentURL(driver).equals(target))
-									driver.get(target);
-							} else {
-									driver.get(target);
-							}
-						} catch (UnhandledAlertException e) {
-								Starter.refreshDriver();
-								Debug.printError("\nERROR: the last injection resulted in a denial of service! Starting a new browser instance to continue the injection process");
-						} catch (WebDriverException e) {
-								Starter.refreshDriver();
-								Debug.printError("\nERROR: the last injection resulted in a denial of service! Starting a new browser instance to continue the injection process");
-						}
+						if  (value.equals("noforce")){
+							if (!stripFragmentFromCurrentURL(driver).equals(target))
+								NavigateTo(driver, target);
+						} else {
+								NavigateTo(driver, target);
+						}						
 						
 					} else if (name.equals("type")){
 						try {

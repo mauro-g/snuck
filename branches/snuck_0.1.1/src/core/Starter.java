@@ -34,6 +34,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -99,6 +105,8 @@ public class Starter  {
 	// monitoring the shutdown signal is mandatory for giving the attack vectors back in the case of forced quit
 	private static HaltHandler shutdown_hook = new HaltHandler();
 	
+	private static String u_data = "UNTRUSTED_DATA";
+	
     public static void main(String[] args) {
     	Runtime.getRuntime().addShutdownHook(shutdown_hook);
     	 
@@ -143,9 +151,10 @@ public class Starter  {
         // check whether the XSS filter can be reversed on the basis of the reflection context
 	    inject.checkReflectionContext(injection);   
 	    	
+	    
 	    // check whether the filter makes an UPDATE operation or
 	    // an INSERT operation
-	    checkOperation(injection, (new Random()).nextInt(10000) + ""); 	
+	    checkOperation((new Random()).nextInt(10000) + "", (new Random()).nextInt(10000) + ""); 	
         	
     	driverFast.quit();
 
@@ -205,7 +214,6 @@ public class Starter  {
     	if (parseArgs.getChromeDriverPath() != null){
     		
     		String path_to_chromedriver = parseArgs.getChromeDriverPath();
-    		
     		service = new ChromeDriverService.Builder()
     						.usingDriverExecutable(new File(path_to_chromedriver))
 							.usingAnyFreePort()
@@ -229,25 +237,24 @@ public class Starter  {
     		
     		usedBrowser = "Google Chrome";
     	} else if (parseArgs.getEnabledIE()) {
-    		IE_enabled = true;
     		
+    		IE_enabled = true;
+			File file = new File(parseArgs.getIEDriverPath());
+			DesiredCapabilities ieCapabilities = DesiredCapabilities.internetExplorer();
+	        ieCapabilities.setCapability(InternetExplorerDriver.INTRODUCE_FLAKINESS_BY_IGNORING_SECURITY_DOMAINS, true);
+			System.setProperty("webdriver.ie.driver", file.getAbsolutePath());
+
     		if (parseArgs.getProxyInfo() != null){
     			String proxy_conf = parseArgs.getProxyInfo();
 
     	    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
     	    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
-    	    	DesiredCapabilities cap = DesiredCapabilities.internetExplorer();
-    	    	cap.setCapability(CapabilityType.PROXY, proxy);
-    	    	driver = new InternetExplorerDriver(cap);
-    		} else {
-        		String path_to_IEdriver = parseArgs.getIEDriverPath();
+    	    	ieCapabilities.setCapability(CapabilityType.PROXY, proxy);
 
-    			File file = new File(path_to_IEdriver);
-    			System.setProperty("webdriver.ie.driver", file.getAbsolutePath());
-    			
-		        driver = new InternetExplorerDriver();
-    		}
-    		
+    	    	driver = new InternetExplorerDriver(ieCapabilities);
+    		} else 
+		        driver = new InternetExplorerDriver(ieCapabilities);
+    	    		
     		usedBrowser = "Internet Explorer";
     	} else {
     		
@@ -279,9 +286,9 @@ public class Starter  {
     	boolean inHtmlComment = false;
     	
 		// Expected reflection context: <tag>UNTRUSTED DATA</tag>
-        parents = ContextDetection.getParents(injection, IE_enabled);
+        parents = ContextDetection.getParents(injection);
 		// Expected reflection context = <element attribute="UNTRUSTED_DATA">
-        elements = ContextDetection.getParentsWithInjectedAttribute(injection, IE_enabled);
+        elements = ContextDetection.getParentsWithInjectedAttribute(injection);
         // Expected reflection context = <!-- UNTRUSTED_DATA -->
     	inHtmlComment = ContextDetection.isInHtmlComment(injection);
     	    	   	
@@ -291,11 +298,13 @@ public class Starter  {
     			
 		for (int i = 0; i < parents.size() && attempt_num == 0; i++){
 			String tagName = parents.get(i).getTagName();
-	        String attrs = ContextDetection.getAllAttributes(parents.get(i), IE_enabled);
+	        String attrs = ContextDetection.getAllAttributes(parents.get(i));
 	        
 	        // Reflection context: <script>UNTRUSTED DATA</script>
 	        if (tagName.toLowerCase().equals("script") && (parents.get(i).getAttribute("src").equals("")) ){
 	        	
+	        	// test is used for understanding whether a particular reflection context in the script content
+	        	// is detected. If so, then unspecialized injections are not performed
 	        	boolean test = false;
 	        	String scriptContent = "";
 	        	
@@ -311,9 +320,9 @@ public class Starter  {
 	        	}
 	        	
 	        	if (!attrs.equals(""))
-	        		reflectionContext = "<script " + attrs + ">" + scriptContent.replace(injection, "UNTRUSTED DATA")  + "</script>";
+	        		reflectionContext = "<script " + attrs + ">" + scriptContent.replace(injection, u_data)  + "</script>";
 	        	else 
-	        		reflectionContext = "<script>" + scriptContent.replace(injection, "UNTRUSTED DATA") + "</script>";
+	        		reflectionContext = "<script>" + scriptContent.replace(injection, u_data) + "</script>";
 
 	        	// <script>someFunction('blablaUNTRUSTED_DATAbla');</script>
 	        	Pattern pattern = Pattern.compile("\\('[^'\\)]*" + injection + ".*");
@@ -321,16 +330,19 @@ public class Starter  {
 	        	
 	        	if (match.find()){
 	        		if (!multi_contexts || (proposals.add("1") 
-	        				&& Debug.askForContext("<script>someFunction('UNTRUSTED_DATA');</script>"))){
+	        				&& Debug.askForContext("<script>someFunction('" + u_data + "');</script>"))){
 		        		
 	        			test = true;
 			        	Debug.print("Injecting malicious vectors... (1)");
 		        		inject.injectWithinScriptTag("')", "//");
 		        		// ' => \'
-		        		Debug.print("Injecting malicious vectors... (2)");
-		        		inject.injectWithinScriptTag("\\')", "//");
-		        		Debug.print("Injecting malicious vectors... (3)");
-		        		inject.injectTag("</script>");
+		        		if (detectedXSSVectors.size() == 0) {
+			        		Debug.print("Injecting malicious vectors... (2)");
+			        		inject.injectWithinScriptTag("\\')", "//");
+			        		Debug.print("Injecting malicious vectors... (3)");
+		        		} else 
+			        		Debug.print("Injecting malicious vectors... (2)");
+	        			inject.injectTag("</script>");
 		        		return;
 	        		}
 	        	} 
@@ -341,15 +353,18 @@ public class Starter  {
 
 	        	if (match.find()){
 	        		if (!multi_contexts || (proposals.add("2") 
-	        				&& Debug.askForContext("<script>someFunction(\"UNTRUSTED_DATA\");</script>"))){
+	        				&& Debug.askForContext("<script>someFunction(\"" + u_data + "\");</script>"))){
 		        		
 		        		test = true;
 			        	Debug.print("Injecting malicious vectors... (1)");
 		        		inject.injectWithinScriptTag("\")", "//");
 		        		// " => \"
-		        		Debug.print("Injecting malicious vectors... (2)");
-		        		inject.injectWithinScriptTag("\\\")", "//");
-		        		Debug.print("Injecting malicious vectors... (3)");
+		        		if (detectedXSSVectors.size() == 0) {
+			        		Debug.print("Injecting malicious vectors... (2)");
+			        		inject.injectWithinScriptTag("\\\")", "//");
+			        		Debug.print("Injecting malicious vectors... (3)");
+		        		} else 
+			        		Debug.print("Injecting malicious vectors... (2)");
 		        		inject.injectTag("</script>");
 		        		return;
 	        		}
@@ -361,7 +376,7 @@ public class Starter  {
 	        	
 	        	if (match.find()){
 	        		if (!multi_contexts || (proposals.add("3") 
-	        				&& Debug.askForContext("<script>someFunction(UNTRUSTED_DATA);</script>"))){
+	        				&& Debug.askForContext("<script>someFunction(" + u_data + ");</script>"))){
 		        		
 		        		test = true;
 			        	Debug.print("Injecting malicious vectors... (1)");
@@ -383,14 +398,17 @@ public class Starter  {
 	        	// really dirty here...
 	        	if (!match.find() && f){
 	        		if (!multi_contexts || (proposals.add("4") 
-	        				&& Debug.askForContext("<script>var variable = 'UNTRUSTED_DATA';</script>"))){
+	        				&& Debug.askForContext("<script>var variable = '" + u_data + "';</script>"))){
 		        		
 		        		test = true;
 			        	Debug.print("Injecting malicious vectors... (1)");
 		        		inject.injectWithinScriptTag("'", "//");
-		        		Debug.print("Injecting malicious vectors... (2)");
-		        		inject.injectWithinScriptTag("\\')", "//");
-		        		Debug.print("Injecting malicious vectors... (3)");
+		        		if (detectedXSSVectors.size() == 0) {
+		        			Debug.print("Injecting malicious vectors... (2)");
+		        			inject.injectWithinScriptTag("\\')", "//");
+		        			Debug.print("Injecting malicious vectors... (3)");
+		        		} else 
+		        			Debug.print("Injecting malicious vectors... (2)");
 		        		inject.injectTag("</script>");
 		        		return;
 	        		}
@@ -402,14 +420,17 @@ public class Starter  {
 	        	
 	        	if (match.find()){
 	        		if (!multi_contexts || (proposals.add("5") 
-	        				&& Debug.askForContext("<script>var variable = \"UNTRUSTED_DATA\";</script>"))){
+	        				&& Debug.askForContext("<script>var variable = \"" + u_data + "\";</script>"))){
 		        		
 		        		test = true;
 			        	Debug.print("Injecting malicious vectors... (1)");
 		        		inject.injectWithinScriptTag("\"", "//");
-		        		Debug.print("Injecting malicious vectors... (2)");
-		        		inject.injectWithinScriptTag("\\\"", "//");
-		        		Debug.print("Injecting malicious vectors... (3)");
+		        		if (detectedXSSVectors.size() == 0) {
+			        		Debug.print("Injecting malicious vectors... (2)");
+			        		inject.injectWithinScriptTag("\\\"", "//");
+			        		Debug.print("Injecting malicious vectors... (3)");
+		        		} else 
+		        			Debug.print("Injecting malicious vectors... (2)");
 		        		inject.injectTag("</script>");
 		        		return;
 	        		}
@@ -421,7 +442,7 @@ public class Starter  {
 
 	        	if (match.find()){
 	        		if (!multi_contexts || (proposals.add("6") 
-	        				&& Debug.askForContext("<script> // UNTRUSTED_DATA</script>"))){
+	        				&& Debug.askForContext("<script> // " + u_data + "</script>"))){
 		        		
 		        		test = true;
 			        	Debug.print("Injecting malicious vectors... (1)");
@@ -438,7 +459,7 @@ public class Starter  {
 
 	        	if (match.find()){
 	        		if (!multi_contexts || (proposals.add("7") 
-	        				&& Debug.askForContext("<script> /* UNTRUSTED_DATA */</script>"))){
+	        				&& Debug.askForContext("<script> /* " + u_data + " */</script>"))){
 		        	
 		        		test = true;
 			        	Debug.print("Injecting malicious vectors... (1)");
@@ -451,7 +472,7 @@ public class Starter  {
 	        	
 	        	if (!test && proposals.size() == 0) {
 	        		if (!multi_contexts || (proposals.add("8") 
-	        				&& Debug.askForContext("<script> UNTRUSTED_DATA </script>"))){
+	        				&& Debug.askForContext("<script> " + u_data + " </script>"))){
 	        			
 	        			Debug.print("Injecting malicious vectors...");
 			        	inject.injectWithinScriptTag(null, "//");
@@ -461,9 +482,9 @@ public class Starter  {
 	        	
 	        } else { 
 	        	if (!attrs.equals(""))
-	        		reflectionContext = "<" + tagName + " " + attrs + ">" + "UNTRUSTED DATA" + "</" + tagName + ">";
+	        		reflectionContext = "<" + tagName + " " + attrs + ">" + u_data + "</" + tagName + ">";
 	        	else 
-	        		reflectionContext = "<" + tagName + ">" + "UNTRUSTED DATA" + "</" + tagName + ">";
+	        		reflectionContext = "<" + tagName + ">" + u_data + "</" + tagName + ">";
 
 	        	if (notRenderedContent_tags == null)
 	        		populateNotRendered();
@@ -475,7 +496,7 @@ public class Starter  {
 	        				
 	        				if (attributes == null){	
 	        					if (!multi_contexts || (proposals.add(k) 
-	        	        				&& Debug.askForContext("<" + k + "> UNTRUSTED_DATA </" + k + ">"))){
+	        	        				&& Debug.askForContext("<" + k + "> " + u_data + " </" + k + ">"))){
 	        		        		
 	        						Debug.print("Injecting malicious vectors... (1)");
 					        		inject.injectTag("</" + k + ">");
@@ -488,7 +509,7 @@ public class Starter  {
 		       					for (String attr : attributes){
 		       						if (parents.get(i).getAttribute(attr) != null){
 		       							if (!multi_contexts  || (proposals.add(k) 
-			        	        				&& Debug.askForContext("<" + k + "> UNTRUSTED_DATA </" + k + ">"))){
+			        	        				&& Debug.askForContext("<" + k + "> " + u_data + "</" + k + ">"))){
 		       								
 			       							Debug.print("Injecting malicious vectors... (1)");
 			       							inject.injectTag("</" + k + ">");
@@ -504,7 +525,7 @@ public class Starter  {
 	        	} else {
 	        		
 	        		if (!multi_contexts || (proposals.add("9") 
-	        				&& Debug.askForContext("<HTMLtag> UNTRUSTED_DATA </HTMLtag>"))){
+	        				&& Debug.askForContext("<HTMLtag> " + u_data + " </HTMLtag>"))){
 	        			
 		        		Debug.print("Injecting malicious vectors...");
 			       		inject.injectTag(null);
@@ -530,27 +551,29 @@ public class Starter  {
         	inject(injection);
         }
 		
-        elements = ContextDetection.getParentsWithInjectedAttribute(injection, IE_enabled);
+        elements = ContextDetection.getParentsWithInjectedAttribute(injection);
 
 		for (int i = 0; i < elements.size(); i++){
         	String tagName = elements.get(i).getTagName();
-        	String attrs = ContextDetection.getAttributesFromInjected(elements.get(i), injection, IE_enabled);
-        	String injected_attribute = ContextDetection.getInjectedAttribute();
+        	String attrs = ContextDetection.getAttributesFromInjected(elements.get(i), injection);
+        	String injected_attribute = ContextDetection.getInjectedAttribute().toLowerCase();
         	        	
-        	if (injected_attribute == null || elements.get(i).getAttribute(injected_attribute) == null) break; 
+        	if (injected_attribute == null || elements.get(i).getAttribute(injected_attribute) == null) continue; 
 	                	
 	        reflectionContext = "<" + tagName + " " + attrs + " " + injected_attribute + "=\"" + 
-	        						elements.get(i).getAttribute(injected_attribute).replace(injection, "UNTRUSTED DATA") + "\">[...]</" + tagName + ">";
-        	
-        	boolean test = false;
+	        					elements.get(i).getAttribute(injected_attribute).replace(injection, u_data) + "\">" +
+	        					"[...]</" + tagName + ">";
+        		        
+        	boolean injection_started = false;
         	String linkText = elements.get(i).getText();
         	String injected_attribute_content = elements.get(i).getAttribute(injected_attribute);
-
+        	boolean on_click = false;
+        	
         	// href? src? 
 	        if (injected_attribute.equals("src") && !tagName.equals("img")){
 	        	if (!multi_contexts || (proposals.add("10") 
-        				&& Debug.askForContext("<HTMLtag src=\"UNTRUSTED_DATA\">"))){
-		        	test = true;
+        				&& Debug.askForContext("<HTMLtag src=\"" + u_data + "\">"))){
+		        	injection_started = true;
 		        	
 		        	if (inject.areAttributesBreakable())
 		        		Debug.print("Injecting malicious vectors... (1)");
@@ -558,11 +581,11 @@ public class Starter  {
 		        		Debug.print("Injecting malicious vectors... ");
 		        	inject.injectUntrustedURL_src();
 	        	}
-	        } else if (injected_attribute.equals("href") && !test){		
+	        } else if (injected_attribute.equals("href") && !injection_started){		
 	        	if (!multi_contexts || (proposals.add("11") 
-        				&& Debug.askForContext("<a href=\"UNTRUSTED_DATA\">"))){
+        				&& Debug.askForContext("<a href=\"" + u_data + "\">"))){
 	        		
-		        	test = true;
+		        	injection_started = true;
 		        	if (inject.areAttributesBreakable())
 		        		Debug.print("Injecting malicious vectors... (1)");
 		        	else 
@@ -570,107 +593,112 @@ public class Starter  {
 		        	inject.injectUntrustedURL_href(linkText);
 	        	}
 	        // IE => width: expression(alert(1));  
-	        } else if (injected_attribute.equals("style") && IE_enabled && !test){	
+	        } else if (injected_attribute.equals("style") && IE_enabled && !injection_started){	
 	        	if (!multi_contexts || (proposals.add("12") 
-        				&& Debug.askForContext("<HTMLtag style=\"UNTRUSTED_DATA\">"))){
+        				&& Debug.askForContext("<HTMLtag style=\"" + u_data + "\">"))){
 	        		
-		        	test = true;
+		        	injection_started = true;
 		        	if (inject.areAttributesBreakable())
 		        		Debug.print("Injecting malicious vectors... (1)");
 		        	else 
 		        		Debug.print("Injecting malicious vectors... ");
 		        	inject.injectExpression();
 	        	}
-	        } else if (injected_attribute.startsWith("on") && !test){
+	        } else if (injected_attribute.startsWith("on") && !injection_started){
 	        			        	
-		        	boolean z = false;
+		        	boolean eventhandler_injection_started = false;
 		        	
 		        	Pattern pattern = Pattern.compile("'[^']*" + injection + ".*");
 		        	Matcher match = pattern.matcher(injected_attribute_content);		
 		        	
 		        	if (match.find()){
-		        		z = true;
-		        		if (injected_attribute.equals("onclick"))
+		        		eventhandler_injection_started = true;
+		        		if (injected_attribute.equals("onclick")) {
 		        			if (!multi_contexts || (proposals.add("13") 
-		            				&& Debug.askForContext("<HTMLtag onclick=\"var z = 'UNTRUSTED_DATA';\">"))){
+		            				&& Debug.askForContext("<HTMLtag onclick=\"var z = '" + u_data + "';\">"))){
 		        				
+		        				injection_started = true;
+		        				on_click = true;
 		        				if (inject.areAttributesBreakable())
 		    		        		Debug.print("Injecting malicious vectors... (1)");
 		    		        	else 
 		    		        		Debug.print("Injecting malicious vectors... ");
 		        				
 		        				inject.injectWithinEventHandler("'");
-		        				test = true;
 		        			}
-		        		else
+		        		} else {
 		        			if (!multi_contexts || (proposals.add("14") 
-		            				&& Debug.askForContext("<HTMLtag eventHandler=\"var z = 'UNTRUSTED_DATA';\">"))){
+		            				&& Debug.askForContext("<HTMLtag eventHandler=\"var z = '" + u_data + "';\">"))){
 		        				
+		        				injection_started = true;
 		        				if (inject.areAttributesBreakable())
 		    		        		Debug.print("Injecting malicious vectors... (1)");
 		    		        	else 
 		    		        		Debug.print("Injecting malicious vectors... ");
 		        				
 		        				inject.injectWithinScriptTag("'", "//");
-		        				test = true;
 		        			}
+		        		}
 		        	} 
 		        	
 		        	pattern = Pattern.compile("\"[^\"]*" + injection + ".*");
 		        	match = pattern.matcher(injected_attribute_content);		
 		        	
 		        	if (match.find()){
-		        		z = true;
-		        		if (injected_attribute.equals("onclick"))
+		        		eventhandler_injection_started = true;
+		        		if (injected_attribute.equals("onclick")) {
 		        			if (!multi_contexts || (proposals.add("15") 
-		            				&& Debug.askForContext("<HTMLtag onclick='var z = \"UNTRUSTED_DATA\";'>"))){
+		            				&& Debug.askForContext("<HTMLtag onclick='var z = \"" + u_data + "\";'>"))){
 		        				
+		        				injection_started = true;
+		        				on_click = true;
 		        				if (inject.areAttributesBreakable())
 		    		        		Debug.print("Injecting malicious vectors... (1)");
 		    		        	else 
 		    		        		Debug.print("Injecting malicious vectors... ");
 		        				
 		        				inject.injectWithinEventHandler("\"");
-		        				test = true;
 		        			}
-		        		else
+		        		} else {
 		        			if (!multi_contexts || (proposals.add("16") 
-		            				&& Debug.askForContext("<HTMLtag eventHandler='var z = \"UNTRUSTED_DATA\";'>"))){
+		            				&& Debug.askForContext("<HTMLtag eventHandler='var z = \"" + u_data + "\";'>"))){
 		        				
+		        				injection_started = true;
 		        				if (inject.areAttributesBreakable())
 		    		        		Debug.print("Injecting malicious vectors... (1)");
 		    		        	else 
 		    		        		Debug.print("Injecting malicious vectors... ");
 		        				
 		        				inject.injectWithinScriptTag("\"", "//");
-		        				test = true;
 		        			}
+		        		}
 		        	} 
 		        	
-		        	if (!z)
+		        	if (!eventhandler_injection_started)
 		        		if (injected_attribute.equals("onclick")) {
 		        			if (!multi_contexts || (proposals.add("17") 
-		            				&& Debug.askForContext("<HTMLtag onclick=\"UNTRUSTED_DATA\">"))){
-		        				
+		            				&& Debug.askForContext("<HTMLtag onclick=\"" + u_data + "\">"))){
+
+		        				injection_started = true;
+		        				on_click = true;
 		        				if (inject.areAttributesBreakable())
 		    		        		Debug.print("Injecting malicious vectors... (1)");
 		    		        	else 
 		    		        		Debug.print("Injecting malicious vectors... ");
 		        				
 		        				inject.injectWithinEventHandler("0");
-		        				test = true;
 		        			}
 		        		} else {
 		        			if (!multi_contexts || (proposals.add("18") 
-		            				&& Debug.askForContext("<HTMLtag eventHandler=\"UNTRUSTED_DATA\">"))){
+		            				&& Debug.askForContext("<HTMLtag eventHandler=\"" + u_data + "\">"))){
 		        				
+		        				injection_started = true;
 		        				if (inject.areAttributesBreakable())
 		    		        		Debug.print("Injecting malicious vectors... (1)");
 		    		        	else 
 		    		        		Debug.print("Injecting malicious vectors... ");
 		        				
 		        				inject.injectWithinScriptTag("0", "//");
-		        				test = true;
 		        			}
 		        		}
 	        }
@@ -679,39 +707,48 @@ public class Starter  {
 	        	boolean tmp = false;
 	        	
 	        	// inject an on* attribute
-	        	if (tagName.equals("img")) {
+	        	if (tagName.equals("img") && injected_attribute.equals("src")) {
 	        		// Change the image as you prefer! It is just useful for injections like
 	        		// <img src="UNTRUSTED_DATA" />
 	        		String path_to_real_image = "http://www.sneaked.net/Images/12300.png";
-	        		if (test){
+	        		// TODO
+	        		// is this reachable?
+	        		if (injection_started){
 	        			Debug.print("Injecting malicious vectors... (2)");
 	        			inject.injectAttribute(path_to_real_image);
 	        		} else {
 	        			if (!multi_contexts || (proposals.add("19") 
-	            				&& Debug.askForContext("<img src=\"UNTRUSTED_DATA\" />"))) {
+	            				&& Debug.askForContext("<img src=\"" + u_data + "\" />"))) {
 	        				
+	        				tmp = true;
 	        				Debug.print("Injecting malicious vectors... (1)");
 		        			inject.injectAttribute(path_to_real_image);
-	        				tmp = true;
 	        			}
 	        		}
 	        	} else
-	        		if (test) {
-	        			Debug.print("Injecting malicious vectors... (2)");
-	        			inject.injectAttribute(null);
+	        		if (injection_started) {
+	        			// do not repeat onclick injections in the case the reflection context is already an
+	        			// attribute onclick
+	        			if (!on_click){
+			        		Debug.print("Injecting malicious vectors... (2)");
+			        		inject.injectAttribute(null);
+	        			}
 	        		} else if (!multi_contexts || (proposals.add("20") 
-	        					&& Debug.askForContext("<HTMLtag attribute=\"UNTRUSTED_DATA\">"))) {
+	        					&& proposals.size() == 1 
+	        					&& Debug.askForContext("<HTMLtag attribute=\"" + u_data + "\">"))) {
 	        			
+        				tmp = true;
         				Debug.print("Injecting malicious vectors... (1)");
 		        		inject.injectAttribute(null);
-		        		tmp = true;
 	        		}
 				
 				// break the element and inject a new tag
-				if (test || tmp) {
-					if (test) Debug.print("Injecting malicious vectors... (3)");
+				if (injection_started || tmp) {
+					if (injection_started && !on_click) Debug.print("Injecting malicious vectors... (3)");
 		        	else Debug.print("Injecting malicious vectors... (2)");
 					
+					// TODO 
+					// notRenderedContent_tags here
 					if (tagName.equals("iframe"))
 						inject.breakElement("</iframe>");
 					else 
@@ -719,16 +756,16 @@ public class Starter  {
 					
 					return;
 				}
-	        } else if (test)
+	        } else if (injection_started)
 	        	return;	        
 	    }
         
         
     	if (inHtmlComment){
-        	reflectionContext = "<!-- UNTRUSTED DATA -->";
+        	reflectionContext = "<!-- " + u_data + " -->";
 
         	if (!multi_contexts || (proposals.add("21") 
-    				&& Debug.askForContext("<!-- UNTRUSTED_DATA -->"))) {
+    				&& Debug.askForContext("<!-- " + u_data + " -->"))) {
         		
 	        		Debug.print("Injecting malicious vectors... (1)");
 	        		inject.injectTag("-->");
@@ -740,7 +777,11 @@ public class Starter  {
 	   			
 		// last attempt 
 		// we need to understand whether the injection falls in CSS context
-		if ( ( multi_contexts || ( elements != null && elements.size() == 0) || ( parents != null && parents.size() == 0 ) ) && attempt_num == 0 ){
+		if ( ( multi_contexts 
+			   || ( elements != null && elements.size() == 0) 
+			   || ( parents != null && parents.size() == 0 ) ) 
+			   && attempt_num == 0 ){
+			
 			attempt_num++;		    
 			String css_injection = randomColor();
 	       	inject(css_injection);
@@ -807,6 +848,7 @@ public class Starter  {
 	 * Detect which kind of operation is performed by the XSS filter among INSERT (1) or UPDATE (2)
 	 */
 	private static void checkOperation(String injection1, String injection2) {
+		injectFast(injection1);
 		injectFast(injection2);
 		
 		operation = ( driverFast.getPageSource().contains(injection1) && driverFast.getPageSource().contains(injection2) ) ? 1 : 2;
@@ -826,8 +868,10 @@ public class Starter  {
 	}
 	
 	public static String randomColor() {
-    	String[] colors = { "aqua", "black", "blue", "fuchsia", "gray", "green", "lime", "maroon", "navy", "olive", "purple", "red",
-    						"silver", "teal", "white", "yellow" };
+    	String[] colors = { "aqua", "black", "blue", "fuchsia", "gray", 
+    						"green", "lime", "maroon", "navy", "olive",
+    						"purple", "red", "silver", "teal", "white",
+    						"yellow" };
     	
         return colors[(int) (Math.random() * colors.length)];
 	}
@@ -868,12 +912,21 @@ public class Starter  {
 		return service;
 	}
 	
-	public static void refreshDriver(){		
-		if (driver != null)
-    		driver.quit();	
-		
-		if (service != null)
-    		service.stop();
+	static ExecutorService executor = Executors.newSingleThreadExecutor();
+	final static Future<?> future = executor.submit(new Runnable() {
+		public void run() {
+			if (driver != null)
+	    		driver.close();	
+		}
+	});	
+	public static void refreshDriver(){ 
+		// it may happen that the webdriver is stopped and it cannot
+		// be closed; therefore a timeout has been set
+		try {
+			future.get(5, TimeUnit.SECONDS);
+		} catch (TimeoutException e) { } 
+		  catch (InterruptedException e) { } 
+		  catch (ExecutionException e) { }
 		
 		setupDriver();
 	}
