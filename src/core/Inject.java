@@ -22,7 +22,6 @@
 
 package core;
 
-
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
@@ -35,15 +34,17 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedCondition;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
 import commandline.Debug;
 import commandline.HaltHandler;
@@ -112,9 +113,9 @@ public class Inject {
 	
 	private static int numberOfXSS = 0;
 	
-	private static int limitNumberOfXSS = 5;
+	private static int limitNumberOfXSS = 3;
 	
-	private static commandline.ProgressBar bar = null;
+	public static commandline.ProgressBar bar = null;
 	
 	public Inject(){
 		_vectors = loadPayloadsFromfile(pathTo_common_payloads);
@@ -210,13 +211,16 @@ public class Inject {
 		return areAttributesBreakable;
 	}
 	
-	private void log(String attackVector){
+	public static void log(String attackVector){
 		if (!Starter.getDetectedXSSVector().contains(attackVector)){
 			Starter.addDetectedXSSVector(attackVector);
-			numberOfXSS++;
+			
+			if (Starter.getOperation() == 1)
+				numberOfXSS++;
 		}
 	}
 	
+	/*
 	private void waitForAlert(String current_injection){
 		final WebDriver driver = Starter.getDriver();
 
@@ -239,6 +243,21 @@ public class Inject {
 				Starter.forceQuit();
 			}
 		}
+	}
+	*/
+	
+	public static void getAlertsWithTimeout(String attack_vector, boolean user_interaction) {
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+	    Future<String> future = executor.submit(new AlertDetection(numberOfXSS, attack_vector, user_interaction));
+	    
+	    try {
+	    	future.get(10, TimeUnit.SECONDS);
+	    } catch (TimeoutException e) {
+ 			Starter.refreshDriver();
+	    } catch (InterruptedException e) { } 
+	      catch (ExecutionException e) { }
+	    
+ 	    executor.shutdownNow();
 	}
 	
 	private String modifyVector(String vector){
@@ -279,11 +298,10 @@ public class Inject {
 		for (String current : vectors){
 			bar.update(i, size);
 			i++;
-								
+			
 			// INSERT OPERATION -> stop the test in the case the filter is too weak (do not flood the browser with an infinite # of alert dialogs)
-			// UPDATE OPERATION -> do not stop test
-			if ( (numberOfXSS <= limitNumberOfXSS - 1 && Starter.getOperation() == 1)
-					|| Starter.getOperation() == 2 ){
+			if ( (numberOfXSS < limitNumberOfXSS && Starter.getOperation() == 1 ) ||
+						Starter.getOperation() == 2) {
 				
 				// put "something" before the payload
 				current = (closing_elements == null) ? current : closing_elements + current;
@@ -293,12 +311,7 @@ public class Inject {
 				// inject!!
 				Starter.inject(processedVector);
 				
-				for (int j = 0; j <= numberOfXSS;j++)
-					try {
-						waitForAlert(processedVector);
-				    } catch (Exception e) {
-				      	break;
-				    }
+				getAlertsWithTimeout(processedVector, false);
 			} 
 		}
 		
@@ -347,29 +360,21 @@ public class Inject {
 				Starter.inject(anchor_vector);
 				
 				List<WebElement> link =  Starter.getDriver().findElements(By.linkText(linkText));  
-				List<WebElement> link2 =  Starter.getDriver().findElements(By.xpath("//a[@href='" + current + "']"));  
+				List<WebElement> link2 =  Starter.getDriver().findElements(By.xpath("//a[@href='" + StringEscapeUtils.unescapeHtml(current) + "']"));  
 				
-				for (int j = 0; j < numberOfXSS;j++)
-					try {
-						waitForAlert(null);
-				    } catch (Exception e) {
-				      	break;
-				    }
+				if (Starter.getOperation() == 1)
+					getAlertsWithTimeout(null, false);
 				
-				try {
-					if (link.size() != 0 && !link.get(0).getAttribute("href").startsWith("denied")){
-						link.get(0).click();
-						
-						waitForAlert(anchor_vector);
-					} else if (link2.size() != 0 && !current.startsWith("denied")){
-						link2.get(0).click();
-						
-						waitForAlert(anchor_vector);
-					}
-			    } catch (Exception e) {
-			      	continue;
-			    }
-			
+				if (link.size() != 0 && !link.get(0).getAttribute("href").startsWith("denied")){
+					link.get(0).click();		
+					
+					getAlertsWithTimeout(anchor_vector, true);
+				} else if (link2.size() != 0 && !link2.get(0).getAttribute("href").startsWith("denied")){
+					link2.get(0).click();
+					
+					getAlertsWithTimeout(anchor_vector, true);
+				}
+			    
 			}
 		}
 	}
@@ -416,13 +421,9 @@ public class Inject {
 				
 				Starter.inject(breaking_vector);
 			
-				for (int j = 0; j < numberOfXSS;j++)
-					try {
-						waitForAlert(null);
-				    } catch (Exception e) {
-				      	break;
-				    }
-				
+				if (Starter.getOperation() == 1)
+					getAlertsWithTimeout(null, false);
+
 				List<WebElement> injected_nodes = Starter.getDriver().findElements(By.xpath("//*[contains(@onclick,\"" + current + "\")]"));
 				
 				if (injected_nodes.size() != 0){
@@ -432,11 +433,7 @@ public class Inject {
 							break;
 						}
 					
-					try {								
-						waitForAlert(breaking_vector);
-				    } catch (Exception e) {
-				      	continue;
-				    }
+					getAlertsWithTimeout(breaking_vector, true);
 				}
 			}
 		}
@@ -463,33 +460,24 @@ public class Inject {
 				List<WebElement> link =  Starter.getDriver().findElements(By.xpath("//a[@href='" + current + "']"));  
 				List<WebElement> link2 = Starter.getDriver().findElements(By.linkText(linkText));
 				
-				for (int j = 0; j < numberOfXSS;j++)
-					try {
-						waitForAlert(null);
-				    } catch (Exception e) {
-				      	break;
-				    }
+				if (Starter.getOperation() == 1)
+					getAlertsWithTimeout(null, false);
 				
-				try {
-					if (link.size() != 0 && !link.get(0).getAttribute("href").startsWith("denied")){
-						link.get(0).click();
+				if (link.size() != 0 && !link.get(0).getAttribute("href").startsWith("denied")){
+					link.get(0).click();
 								
-						waitForAlert(current);
-					} else if (link2.size() != 0 
-								&& !link2.get(0).getAttribute("href").startsWith("denied")
-								&& ( 
-										StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("javascript") || 
-										StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("data") || 
-										StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("feed") || 
-										StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("vbscript") )
-									){
-						link2.get(0).click();
+					getAlertsWithTimeout(current, true);
+				} else if (link2.size() != 0 
+							  && ( 
+									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("javascript") || 
+									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("data") || 
+									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("feed") || 
+									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("vbscript") )
+								){
+					link2.get(0).click();
 						
-						waitForAlert(current);
-					}
-				 } catch (Exception e) {
-				    continue;
-			    }	
+					getAlertsWithTimeout(current, true);
+				}	
 			}
 		}
 	}
@@ -604,7 +592,7 @@ public class Inject {
 				reverser_c.join();
 				reverser_d.join();
 				reverser_e.join();
-			} catch (InterruptedException e1) {
+			} catch (InterruptedException e) {
 				Debug.printError("\nERROR: unable to terminate a thread");
 			}
 			
@@ -612,7 +600,6 @@ public class Inject {
 		} else {
 			reverse(injection);
 		}
-		
 	}
 
 	public void reverse(String injection){
@@ -716,12 +703,8 @@ public class Inject {
 
 				Starter.inject(breaking_vector);
 			
-				for (int j = 0; j < numberOfXSS;j++)
-					try {
-						waitForAlert(null);
-				    } catch (Exception e) {
-				      	break;
-				    }
+				if (Starter.getOperation() == 1)
+					getAlertsWithTimeout(null, false);
 				
 				List<WebElement> injected_nodes = Starter.getDriver().findElements(By.xpath("//*[contains(@onclick,\"" + current + "\")]"));
 				
@@ -732,11 +715,7 @@ public class Inject {
 							break;
 						}
 					
-					try {								
-						waitForAlert(breaking_vector);
-				    } catch (Exception e) {
-				      	continue;
-				    }
+					getAlertsWithTimeout(breaking_vector, true);
 				}
 			}
 		}
