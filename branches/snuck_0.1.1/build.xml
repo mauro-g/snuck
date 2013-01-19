@@ -26,6 +26,16 @@
         <pathelement location="lib/xalan-2.7.1.jar"/>
         <pathelement location="lib/json-20080701.jar"/>
         <pathelement location="lib/commons-exec-1.1.jar"/>
+        <pathelement location="lib/browsermob-proxy-2.0-beta-6.jar"/>
+        <pathelement location="lib/http-2.2.1.jar"/>
+        <pathelement location="lib/jetty-continuation-7.3.0.v20110203.jar"/>
+        <pathelement location="lib/jetty-http-7.3.0.v20110203.jar"/>
+        <pathelement location="lib/jetty-io-7.3.0.v20110203.jar"/>
+        <pathelement location="lib/jetty-security-7.3.0.v20110203.jar"/>
+        <pathelement location="lib/jetty-server-7.3.0.v20110203.jar"/>
+ 	<pathelement location="lib/jetty-servlet-7.3.0.v20110203.jar"/>
+        <pathelement location="lib/jetty-util-7.3.0.v20110203.jar"/>
+
     </path>
     <target name="init">
         <mkdir dir="bin"/>
