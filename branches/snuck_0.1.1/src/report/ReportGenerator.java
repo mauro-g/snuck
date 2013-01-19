@@ -4,7 +4,7 @@
    
    Author: Mauro Gentile <gentile.mauro.mg@gmail.com>
 
-   Copyright 2012 Mauro Gentile
+   Copyright 2012-2013 Mauro Gentile
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -28,12 +28,13 @@ import java.util.Map;
 
 import commandline.Debug;
 import commandline.HaltHandler;
+import commandline.HttpRequestParser;
 
 public class ReportGenerator {
 	 public static void generateReport(String reportFileName, String XMLconfigFile, String InUseBrowser, 
 			 String reflectionContext, int operation, Map<String, List<String>> allowedElements, 
 			 List<String> allowedProtocols, List<String> detectedXSSVectors, 
-			 boolean weakFilter, boolean brokenPage, int method) {
+			 boolean weakFilter, boolean brokenPage, int method, HttpRequestParser httpRequest, String post_parameters) {
 		 
 		 try{
 			 FileWriter fstream = new FileWriter(reportFileName);
@@ -155,7 +156,7 @@ public class ReportGenerator {
 								 replace("&", "&amp").
 								 replace("<", "&lt;").
 								 replace(">", "&gt;").
-								 replace("UNTRUSTED DATA", "<font color=\"red\">UNTRUSTED_DATA</font>"));
+								 replace("UNTRUSTED_DATA", "<font color=\"red\">UNTRUSTED_DATA</font>"));
 			  out.write("</td>" +
 					 "</tr>" +
 					 "<tbody>" +
@@ -212,8 +213,16 @@ public class ReportGenerator {
 	            if (allowedProtocols.size() == 0){
 		            out.write("<table id=\"hor-minimalist-b\">" +
 							"   <thead>" +
-							"	  	<tr>" +
-							"       	<th scope=\"col\">Use Case</th>" +
+							"	  	<tr>");
+		            
+		            	if (httpRequest != null)
+							out.write("<th scope=\"col\">HTTP request</th>");
+						else if (post_parameters != null)
+							out.write("<th scope=\"col\">POST parameters</th>");
+						else
+							out.write("<th scope=\"col\">Config file</th>");
+		            	
+		            	out.write("" +
 							"        </tr>" +
 							"   </thead>" +
 							"   <tbody>" +
@@ -221,6 +230,11 @@ public class ReportGenerator {
 							"<td>" +
 							"<textarea style=\"width: 100%; height: 500px;\">");
 									
+		            	if (httpRequest != null)
+							readConfigFile(httpRequest.getFileName(), out);
+		            	else if (post_parameters != null)
+		            		out.write(post_parameters);
+		            	else
 							readConfigFile(XMLconfigFile, out);
 							    	
 							out.write("</textarea>" +
@@ -318,16 +332,28 @@ public class ReportGenerator {
 			if (allowedElements.size() != 0 || allowedProtocols.size() != 0) {
 				out.write("<table id=\"hor-minimalist-b\">" +
 						"   <thead>" +
-						"	  	<tr>" +
-						"       	<th scope=\"col\">Config file</th>" +
-						"        </tr>" +
+						"	  	<tr>");
+						
+						if (httpRequest != null)
+							out.write("<th scope=\"col\">HTTP request</th>");
+						else if (post_parameters != null)
+							out.write("<th scope=\"col\">POST parameters</th>");
+						else
+							out.write("<th scope=\"col\">Config file</th>");
+				
+						out.write("        </tr>" +
 						"   </thead>" +
 						"   <tbody>" +
 						"<tr>" +
 						"<td>" +
 						"<textarea style=\"width: 100%; height: 400px;\">");
 								
-						readConfigFile(XMLconfigFile, out);
+						if (httpRequest != null)
+							readConfigFile(httpRequest.getFileName(), out);
+						else if (post_parameters != null)
+		            		out.write(post_parameters);
+		            	else
+							readConfigFile(XMLconfigFile, out);
 						    	
 						out.write("</textarea>" +
 								"</td>" +

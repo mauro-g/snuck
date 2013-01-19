@@ -4,7 +4,7 @@
    
    Author: Mauro Gentile <gentile.mauro.mg@gmail.com>
 
-   Copyright 2012 Mauro Gentile
+   Copyright 2012-2013 Mauro Gentile
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ package core;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -45,6 +46,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.openqa.selenium.Cookie;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -55,6 +57,8 @@ import org.openqa.selenium.ie.InternetExplorerDriver;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
+
+import com.gargoylesoftware.htmlunit.WebClient;
 
 import commandline.CmdArgsParser;
 import commandline.Debug;
@@ -67,7 +71,7 @@ public class Starter  {
 	
 	private static WebDriver driver = null;
 	
-	private static HtmlUnitDriver driverFast = null;
+	private static WebDriver driverFast = null;
 		
 	private static List<String> detectedXSSVectors = new LinkedList<String>();
 	
@@ -109,14 +113,18 @@ public class Starter  {
 	
     public static void main(String[] args) {
     	Runtime.getRuntime().addShutdownHook(shutdown_hook);
-    	 
+    	
+    	// avoid useless and annoying logs
+		Logger logger = Logger.getLogger ("");
+		logger.setLevel (Level.OFF);
+		
     	// parse command line arguments 
     	parseArgs = new CmdArgsParser(args);    	
     	
     	// parse the xml config file
     	xmlConfig = new XmlConfigReader(parseArgs.getConfigfileName());
 
-    	// create and Inject object - it will be used later to make injections
+    	// Inject object - it will be used later to make injections
     	Inject inject;
     	
     	// check whether the tester wants to use a remote repository for the attack vectors
@@ -125,20 +133,17 @@ public class Starter  {
     	else
     		inject = new Inject();
     		
-		// avoid useless and annoying logs
-		Logger logger = Logger.getLogger ("");
-		logger.setLevel (Level.OFF);
-				
 		/**
 		 * Here starts the reverse engineering process
 		 */	
    	
 		// HtmlUnitDriver is started
    		setupDriverFast();
-		
+		   		
 		if (parseArgs.getStartConfigfileName() != null){
 			// parse the start config file - i.e. login use case
 	    	xmlConfigStart = new XmlConfigReader(parseArgs.getStartConfigfileName());
+	    	// perform the login
 	    	xmlConfigStart.commonInject(driverFast, null, 0);
 		}
 		    
@@ -150,7 +155,6 @@ public class Starter  {
 
         // check whether the XSS filter can be reversed on the basis of the reflection context
 	    inject.checkReflectionContext(injection);   
-	    	
 	    
 	    // check whether the filter makes an UPDATE operation or
 	    // an INSERT operation
@@ -177,100 +181,143 @@ public class Starter  {
     	
     	report.ReportGenerator.generateReport(parseArgs.getReportfileName(), parseArgs.getConfigfileName(), 
     											usedBrowser, reflectionContext, operation, allowedElements, 
-    											allowedProtocols, detectedXSSVectors, weakFilter, false, xmlConfig.getMethod());
+    											allowedProtocols, detectedXSSVectors, weakFilter, false, xmlConfig.getMethod(),
+    											parseArgs.getHttpRequest(), parseArgs.getPostParameters());
     	
     	Debug.print("\nThe malicious test has finished. A report has been generated: " + parseArgs.getReportfileName());
 
+    	if (parseArgs.getShowVectors() && detectedXSSVectors.size() != 0){
+    		Debug.print("\nSuccessful attack vectors:\n");
+    		
+    		for (String vector : detectedXSSVectors)
+    			System.out.println(vector);
+    	}
+    	
     	driver.quit();
     	
     	// Running on Chrome? Ok let's stop the service
     	if (service != null)
     		service.stop();
     	
+    	if (parseArgs.getHttpRequest() != null || parseArgs.getPostParameters() != null)
+    		Server.stopServer();
+    	
     	HaltHandler.quit_ok();
     }
     
-    /**
-   	 * Start the HtmlUnit web driver
-   	 */
     private static void setupDriverFast(){
-    	if (parseArgs.getProxyInfo() != null){
-			String proxy_conf = parseArgs.getProxyInfo();
+    	if (parseArgs.getHttpRequest() != null){
+    		driverFast = Proxy.createProxedDriver(parseArgs.getHttpRequest(), 0);
+	    	driverFast = setThrowExceptionOnScriptError(driverFast);
+    	} else {
+	    	if (parseArgs.getProxyInfo() != null){
+				String proxy_conf = parseArgs.getProxyInfo();
+	
+		    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
+		    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
+		    	DesiredCapabilities cap = new DesiredCapabilities();
+		    	cap.setCapability(CapabilityType.PROXY, proxy);
+		    	driverFast = new HtmlUnitDriver(cap);
+			} else 
+				driverFast = new HtmlUnitDriver();
+	    	
+	    	driverFast = setThrowExceptionOnScriptError(driverFast);
+	    	
+	    	if (parseArgs.getCookie() != null){
+	    		setCookies(driverFast, parseArgs.getCookie());
+	    	}
+    	}
+    }
+    
+    public static void setCookies(WebDriver driver, String cookie){
+    	String[] cookies = cookie.split(";");
+    	String[] pair;
 
-	    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
-	    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
-	    	DesiredCapabilities cap = new DesiredCapabilities();
-	    	cap.setCapability(CapabilityType.PROXY, proxy);
-	    	driverFast = new HtmlUnitDriver(cap);
-		} else 
-			driverFast = new HtmlUnitDriver();
+		driver.get(xmlConfig.getTargetDomain());
+
+    	for (int i = 0; i < cookies.length; i++){
+    		pair = cookies[i].split("=");
+
+    		if (pair.length == 1)
+    			driver.manage().addCookie(new Cookie(pair[0],""));
+    		else if (pair.length == 2)
+    			driver.manage().addCookie(new Cookie(pair[0], pair[1]));
+    	}
     }
     
     /**
 	 * Start the requested web driver
 	 */
 	private static void setupDriver(){
-    	
-    	if (parseArgs.getChromeDriverPath() != null){
-    		
-    		String path_to_chromedriver = parseArgs.getChromeDriverPath();
-    		service = new ChromeDriverService.Builder()
-    						.usingDriverExecutable(new File(path_to_chromedriver))
-							.usingAnyFreePort()
-							.build();
-    		
-    		try {
-				service.start();
-			} catch (IOException e) {
-				Debug.printError("ERROR: unable to load Chrome server. \n" + e.getMessage());
-				HaltHandler.quit_nok();
-			}
-
-    		// disable the built-in Chrome XSS filter
-    		DesiredCapabilities capabilities = DesiredCapabilities.chrome();
-    		capabilities.setCapability("chrome.switches", Arrays.asList("--disable-xss-auditor", "--disable-extensions"));
-
-        	if (parseArgs.getProxyInfo() != null)
-        		capabilities.setCapability("chrome.switches", Arrays.asList("--proxy-server=" + parseArgs.getProxyInfo()));
-
-    		driver = new RemoteWebDriver(service.getUrl(), capabilities);
-    		
-    		usedBrowser = "Google Chrome";
-    	} else if (parseArgs.getEnabledIE()) {
-    		
-    		IE_enabled = true;
-			File file = new File(parseArgs.getIEDriverPath());
-			DesiredCapabilities ieCapabilities = DesiredCapabilities.internetExplorer();
-	        ieCapabilities.setCapability(InternetExplorerDriver.INTRODUCE_FLAKINESS_BY_IGNORING_SECURITY_DOMAINS, true);
-			System.setProperty("webdriver.ie.driver", file.getAbsolutePath());
-
-    		if (parseArgs.getProxyInfo() != null){
-    			String proxy_conf = parseArgs.getProxyInfo();
-
-    	    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
-    	    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
-    	    	ieCapabilities.setCapability(CapabilityType.PROXY, proxy);
-
-    	    	driver = new InternetExplorerDriver(ieCapabilities);
-    		} else 
-		        driver = new InternetExplorerDriver(ieCapabilities);
-    	    		
-    		usedBrowser = "Internet Explorer";
-    	} else {
-    		
-    		if (parseArgs.getProxyInfo() != null){
-    			String proxy_conf = parseArgs.getProxyInfo();
-
-    	    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
-    	    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
-    	    	DesiredCapabilities cap = new DesiredCapabilities();
-    	    	cap.setCapability(CapabilityType.PROXY, proxy);
-    	    	driver = new FirefoxDriver(cap);
-    		} else {
-    			driver = new FirefoxDriver();
-    		}
-    		
+		if (parseArgs.getHttpRequest() != null){
+    		driver = Proxy.createProxedDriver(parseArgs.getHttpRequest(), 1);
     		usedBrowser = "Mozilla Firefox";
+    	} else {
+	    	if (parseArgs.getChromeDriverPath() != null){
+	    		
+	    		String path_to_chromedriver = parseArgs.getChromeDriverPath();
+	    		service = new ChromeDriverService.Builder()
+	    						.usingDriverExecutable(new File(path_to_chromedriver))
+								.usingAnyFreePort()
+								.build();
+	    		
+	    		try {
+					service.start();
+				} catch (IOException e) {
+					Debug.printError("ERROR: unable to load Chrome server. \n" + e.getMessage());
+					HaltHandler.quit_nok();
+				}
+	
+	    		// disable the built-in Chrome XSS filter
+	    		DesiredCapabilities capabilities = DesiredCapabilities.chrome();
+	    		capabilities.setCapability("chrome.switches", Arrays.asList("--disable-xss-auditor", "--disable-extensions"));
+	
+	        	if (parseArgs.getProxyInfo() != null)
+	        		capabilities.setCapability("chrome.switches", Arrays.asList("--proxy-server=" + parseArgs.getProxyInfo()));
+	
+	    		driver = new RemoteWebDriver(service.getUrl(), capabilities);
+	    		
+	    		usedBrowser = "Google Chrome";
+	    	} else if (parseArgs.getEnabledIE()) {
+	    		
+	    		IE_enabled = true;
+				File file = new File(parseArgs.getIEDriverPath());
+				DesiredCapabilities ieCapabilities = DesiredCapabilities.internetExplorer();
+		        ieCapabilities.setCapability(InternetExplorerDriver.INTRODUCE_FLAKINESS_BY_IGNORING_SECURITY_DOMAINS, true);
+				System.setProperty("webdriver.ie.driver", file.getAbsolutePath());
+	
+	    		if (parseArgs.getProxyInfo() != null){
+	    			String proxy_conf = parseArgs.getProxyInfo();
+	
+	    	    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
+	    	    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
+	    	    	ieCapabilities.setCapability(CapabilityType.PROXY, proxy);
+	
+	    	    	driver = new InternetExplorerDriver(ieCapabilities);
+	    		} else 
+			        driver = new InternetExplorerDriver(ieCapabilities);
+	    	    		
+	    		usedBrowser = "Internet Explorer";
+	    	} else {
+	    		
+	    		if (parseArgs.getProxyInfo() != null){
+	    			String proxy_conf = parseArgs.getProxyInfo();
+	
+	    	    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
+	    	    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
+	    	    	DesiredCapabilities cap = new DesiredCapabilities();
+	    	    	cap.setCapability(CapabilityType.PROXY, proxy);
+	    	    	driver = new FirefoxDriver(cap);
+	    		} else {
+	    			driver = new FirefoxDriver();
+	    		}
+	    		
+	    		usedBrowser = "Mozilla Firefox";
+	    	}
+	    	
+	    	if (parseArgs.getCookie() != null){
+	    		setCookies(driver, parseArgs.getCookie());
+	    	}
     	}
     }
 	
@@ -884,7 +931,7 @@ public class Starter  {
 		return (driver == null) ? null : driver;
 	}
 	
-	public static HtmlUnitDriver getDriverFast() {
+	public static WebDriver getDriverFast() {
 		return (driverFast == null) ? null : driverFast;
 	}
 
@@ -929,6 +976,10 @@ public class Starter  {
 		  catch (ExecutionException e) { }
 		
 		setupDriver();
+
+		if (parseArgs.getStartConfigfileName() != null){
+	    	xmlConfigStart.commonInject(driver, null, 0);
+		}
 	}
 	
 	public static CmdArgsParser getParsedArgs() {
@@ -943,7 +994,7 @@ public class Starter  {
 		if (reflectionContext != null) {
 			report.ReportGenerator.generateReport(parseArgs.getReportfileName(), parseArgs.getConfigfileName(), usedBrowser, 
 													reflectionContext, operation, allowedElements, allowedProtocols, detectedXSSVectors, 
-													false, true, xmlConfig.getMethod());
+													false, true, xmlConfig.getMethod(), parseArgs.getHttpRequest(), parseArgs.getPostParameters());
 	    	Debug.print("\nA report has been generated: " + parseArgs.getReportfileName());
 		}
 		
@@ -956,6 +1007,9 @@ public class Starter  {
     	if (service != null)
     		service.stop();
     	
+    	if (parseArgs.getHttpRequest() != null || parseArgs.getPostParameters() != null)
+    		Server.stopServer();
+    	
     	HaltHandler.quit_nok();
 	}
 	
@@ -963,7 +1017,7 @@ public class Starter  {
 		if (reflectionContext != null) {
 			report.ReportGenerator.generateReport(parseArgs.getReportfileName(), parseArgs.getConfigfileName(), usedBrowser, 
 													reflectionContext, operation, allowedElements, allowedProtocols, detectedXSSVectors, 
-													false, false, xmlConfig.getMethod());
+													false, false, xmlConfig.getMethod(), parseArgs.getHttpRequest(), parseArgs.getPostParameters());
 	    	Debug.print("\n\nJust broken the tested XSS filter! \nA report has been generated: " + parseArgs.getReportfileName());
 		}
 		
@@ -976,6 +1030,29 @@ public class Starter  {
     	if (service != null)
     		service.stop();
     	
+    	if (parseArgs.getHttpRequest() != null || parseArgs.getPostParameters() != null)
+    		Server.stopServer();
+    	
     	HaltHandler.quit_ok();
+	}
+	
+	public static WebDriver setThrowExceptionOnScriptError(WebDriver driver) {
+
+		try {
+			Field field = driver.getClass().getDeclaredField("webClient");
+
+			boolean accessibility = field.isAccessible();
+			field.setAccessible(true);
+			WebClient webClient = (WebClient) field.get(driver);
+			webClient.setThrowExceptionOnScriptError(false);
+			
+			field.set(driver, webClient);
+			field.setAccessible(accessibility);
+		} catch (Exception e) {
+			Debug.printError("ERROR: unable to modify the htmlunit settings");
+            HaltHandler.quit_nok();
+		}
+		
+		return driver;
 	}
 }
