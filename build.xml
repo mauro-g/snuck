@@ -35,7 +35,7 @@
         <pathelement location="lib/jetty-server-7.3.0.v20110203.jar"/>
  	<pathelement location="lib/jetty-servlet-7.3.0.v20110203.jar"/>
         <pathelement location="lib/jetty-util-7.3.0.v20110203.jar"/>
-
+        <pathelement location="lib/servlet-api-2.5.jar"/>
     </path>
     <target name="init">
         <mkdir dir="bin"/>
@@ -86,6 +86,16 @@
             <zipfileset excludes="META-INF/*.SF" src="lib/xalan-2.7.1.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/json-20080701.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-exec-1.1.jar"/>
+	    <zipfileset excludes="META-INF/*.SF" src="lib/browsermob-proxy-2.0-beta-6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/http-2.2.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jetty-continuation-7.3.0.v20110203.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jetty-http-7.3.0.v20110203.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jetty-io-7.3.0.v20110203.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jetty-security-7.3.0.v20110203.jar"/>
+	    <zipfileset excludes="META-INF/*.SF" src="lib/jetty-server-7.3.0.v20110203.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jetty-servlet-7.3.0.v20110203.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jetty-util-7.3.0.v20110203.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/servlet-api-2.5.jar"/>
         </jar>
     </target>
 </project>
