@@ -4,7 +4,7 @@
    
    Author: Mauro Gentile <gentile.mauro.mg@gmail.com>
 
-   Copyright 2012 Mauro Gentile
+   Copyright 2012-2013 Mauro Gentile
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
@@ -49,7 +50,7 @@ public class Reverser extends Thread {
 	private String[] htmlElements = null;
 	
 	// HTMLUnit web driver - each thread has its own driver
-	private HtmlUnitDriver driver = null;
+	private WebDriver driver = null;
 	
 	// XML configuration file parser
 	private XmlConfigReader xmlConfig = null;
@@ -73,17 +74,28 @@ public class Reverser extends Thread {
 		CmdArgsParser args = Starter.getParsedArgs();
 		
 		xmlConfig = new XmlConfigReader(args.getConfigfileName());
-				
-		if (args.getProxyInfo() != null){
-			String proxy_conf = args.getProxyInfo();
+		
+		if (args.getHttpRequest() != null){
+    		driver = Proxy.createProxedDriver(args.getHttpRequest(), 0);
+	    	driver = Starter.setThrowExceptionOnScriptError(driver);
+    	} else {
+	    	if (args.getProxyInfo() != null){
+				String proxy_conf = args.getProxyInfo();
+	
+		    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
+		    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
+		    	DesiredCapabilities cap = new DesiredCapabilities();
+		    	cap.setCapability(CapabilityType.PROXY, proxy);
+		    	driver = new HtmlUnitDriver(cap);
+			} else 
+				driver = new HtmlUnitDriver();
+	    	
+	    	driver = Starter.setThrowExceptionOnScriptError(driver);
 
-	    	org.openqa.selenium.Proxy proxy = new org.openqa.selenium.Proxy();
-	    	proxy.setHttpProxy(proxy_conf).setFtpProxy(proxy_conf).setSslProxy(proxy_conf);
-	    	DesiredCapabilities cap = new DesiredCapabilities();
-	    	cap.setCapability(CapabilityType.PROXY, proxy);
-	    	driver = new HtmlUnitDriver(cap);
-		} else 
-			driver = new HtmlUnitDriver();
+	    	if (args.getCookie() != null){
+	    		Starter.setCookies(driver, args.getCookie());
+	    	}
+    	}
 		
 		if (args.getStartConfigfileName() != null){
 			XmlConfigReader xmlConfigStart = new XmlConfigReader(args.getStartConfigfileName());
@@ -121,10 +133,10 @@ public class Reverser extends Thread {
 	public static void checkReversion(String delimiter, String element, 
 										String[] htmlAttributes, 
 										HashMap<String, List<String>> allowedElements,
-										HtmlUnitDriver driver){		
+										WebDriver webDriver){		
 		String reflection = null;
 		Pattern pattern = Pattern.compile(delimiter + "(.*)" + delimiter, Pattern.DOTALL);
-    	Matcher match = pattern.matcher(driver.getPageSource().replace("\n", ""));	
+    	Matcher match = pattern.matcher(webDriver.getPageSource().replace("\n", ""));	
     		
     	if (match.find()){
     		reflection = match.group().replace(delimiter, "").trim();

@@ -4,7 +4,7 @@
    
    Author: Mauro Gentile <gentile.mauro.mg@gmail.com>
 
-   Copyright 2012 Mauro Gentile
+   Copyright 2012-2013 Mauro Gentile
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -50,7 +50,9 @@ import org.xml.sax.SAXException;
 
 import commandline.Debug;
 import commandline.HaltHandler;
+import commandline.HttpRequestParser;
 import core.Inject;
+import core.Server;
 import core.Starter;
 
 /**
@@ -69,7 +71,7 @@ import core.Starter;
 	</get>
 </root>
  * 
- * 2. XSS via form(s?) to populate
+ * 2. XSS via form (to populate)
 <root>
 	<post>
 		<parameters>
@@ -112,6 +114,9 @@ public class XmlConfigReader {
 	
 	// method => 1 stands for reflected, 2 stands for stored, 0 stands for error
 	private int method = 0;
+	
+	// useful in the case arguments such as -r or -data are supplied
+	private static String target;
 	
 	public int getMethod() {
 		return this.method;
@@ -167,6 +172,45 @@ public class XmlConfigReader {
 		
 		return url;
 	}
+	
+	public String getTargetDomain(){
+		if (method == 1)
+			return GetTargetUrl();
+		else {
+			if (target != null) {
+				try {
+					URL target_domain = new URL(target);
+					
+					return target_domain.getProtocol() + "://" + target_domain.getHost() + (target_domain.getPort() != -1 ? ":" + target_domain.getPort() : "");
+				} catch (MalformedURLException e) {
+					Debug.printError("\nERROR: unable to identify the target domain");
+					HaltHandler.quit_nok();
+				}
+			}
+			
+			NodeList commands = root.getElementsByTagName("name");
+			
+			for (int i = 0; i < commands.getLength(); i++){
+				if (commands.item(i).getTextContent().equals("open") && 
+					commands.item(i).getParentNode() != null && 
+					commands.item(i).getParentNode().getNodeName().equals("command")){
+
+					String url = root.getElementsByTagName("target").item(i - Parameters.size()).getTextContent();
+					try {
+						URL target_domain = new URL(url);
+						
+						return target_domain.getProtocol() + "://" + target_domain.getHost() + (target_domain.getPort() != -1 ? ":" + target_domain.getPort() : "");
+					} catch (MalformedURLException e) {
+						Debug.printError("\nERROR: unable to identify the target domain");
+						HaltHandler.quit_nok();
+					}
+				}
+			}
+		}
+		
+		return null;
+	}
+	
 	
 	private String GetTargetUrl(){	
 		String targetURL = getTextContentByName("targeturl");
@@ -231,7 +275,7 @@ public class XmlConfigReader {
 			HaltHandler.quit_nok();
 		}
 		
-		try {
+		try {		
 			driver.get(url);
 		} catch (UnhandledAlertException e){
 
@@ -296,9 +340,9 @@ public class XmlConfigReader {
 						HaltHandler.quit_nok();
 					}
 			   		driver.findElements(By.xpath("//a")).get(0).click();
-				} else			
+				} else 		
 					NavigateTo(driver, target_url);
-
+				
 			} catch (UnhandledAlertException e) {
 				Starter.refreshDriver();
 				Debug.printError("\nERROR: the last injection resulted in a denial of service! Starting a new driver to continue the injection process");
@@ -393,12 +437,7 @@ public class XmlConfigReader {
 							Starter.brokenPage();
 						}
 					} else if (name.equals("deleteCookies")) {
-						try {
-							driver.manage().deleteAllCookies();
-						} catch (NullPointerException e){
-							Debug.printError("\nERROR: cannot find the element defined through [" + target + "]");
-							Starter.brokenPage();
-						}
+						driver.manage().deleteAllCookies();
 					} else if (name.equals("click")) {
 						try {
 							ele.click();
@@ -457,15 +496,164 @@ public class XmlConfigReader {
 	public static LinkedList<String> getQueryMap(String query) {  
 	    String[] params = query.split("&");  
 	    LinkedList<String> parameters = new LinkedList<String>();
-	    
+
 	    for (String param : params) {  
 	        String name = param.split("=")[0];  
 	        String value = null;
 	        if (param.split("=").length == 2)
 	        	value = param.split("=")[1];  
 	        
-	        parameters.add(name + "=" + ( (value == null) ? "" : value ) );  
+	        if (!name.equals(""))
+	        	parameters.add(name + "=" + ( (value == null) ? "" : value ) );  
 	    }  
 	    return parameters;  
+	}
+
+	public static String generateConfigFileFromHTTPRequest(HttpRequestParser http_request, String parameter_to_inject) {	
+		if (http_request.getMethod().equals("POST")){
+			target = http_request.getTargetURL();
+			String form = "Injecting... <form action=\"" + http_request.getTargetURL() + "\" method=\"POST\">";
+			String element_to_click = "submit";
+			
+			for (String h : http_request.getParameters().keySet()){
+				if (h.equals(parameter_to_inject))
+					form += "<input id=\"inject\" name=\"" + h + "\" value=\"\" type=\"text\" />";
+				else 
+					form += "<input name=\"" + h + "\" value=\"" + http_request.getParameter(h) + "\" type=\"hidden\" />";
+			}
+			
+			
+			if (http_request.getParameters().containsKey("submit")) {
+				element_to_click = "submit_snuck";
+				form += "<input name=\"" + element_to_click + "\" type=\"submit\" /></form>";
+			} else
+				form += "<input name=\"" + element_to_click + "\" type=\"submit\" /></form>";
+
+			Server.configureServer(form);
+			
+			String xmlConfig = "<root>\n" +
+								"	<post>\n" +
+								"		<parameters>\n" +
+								"			<commands>\n" +
+								"				<command>\n" +
+								"					<name>open</name>\n" +
+								"					<target>http://localhost:9000</target>\n" +
+								"					<value></value>\n" +
+								"				</command>\n" +
+								"				<command>\n" +
+								"					<name>type</name>\n" +
+								"					<target>id=inject</target>\n" +
+								"					<value>${INJECTION}</value>\n" +
+								"				</command>\n" +
+								"				<command>\n" +
+								"					<name>click</name>\n" +
+								"					<target>name=" + element_to_click + "</target>\n" +
+								"					<value></value>\n" +
+								"				</command>\n" +
+								"			</commands>\n" +
+								"		</parameters>\n" +
+								"	</post>\n" +
+								"</root>\n";
+			
+			return xmlConfig;
+		} else {
+			URL target = null;
+			String targetURL = http_request.getTargetURL();
+			LinkedList<String> parameters = null;
+			String params = "";
+			
+			try {
+				target = new URL(targetURL);
+			} catch (MalformedURLException e) {
+				Debug.printError("ERROR: unable to parse the supplied URL (" + targetURL + ")");
+	            HaltHandler.quit_nok();
+			}
+			
+			if (target.getQuery() != null){
+				parameters = getQueryMap(target.getQuery());
+					
+				for (String p : parameters) {  
+					if (p.split("=").length == 2) {
+						if (!p.split("=")[0].equals(parameter_to_inject)){
+							params += "			<parameter>" +
+										p.split("=")[0] + ( p.split("=")[1].equals("") ? "" : "=" + p.split("=")[1] );
+							params += "</parameter>\n";
+						}
+					}
+				}  
+			}
+						
+			return "<root>\n" +
+					"	<get>\n" +
+					"		<parameters>\n" +
+					"			<targeturl>" + targetURL.split("\\?")[0] + "</targeturl>\n" +
+					"			<paramtoinject>" + parameter_to_inject + "</paramtoinject>\n" +
+								params + 
+					"		</parameters>\n" +
+					"	</get>\n" +
+					"</root>\n";
+		}
+	}
+
+	public static String generateConfigFileFromPostParameter(String post_parameters, String targetURL, String targetParam) {
+		target = targetURL;
+		String form = "Injecting... <form action=\"" + targetURL + "\" method=\"POST\">";
+		String element_to_click = "submit";
+		LinkedList<String> params = getQueryMap(post_parameters);
+		boolean flag = false;
+		
+		for (String h : params){
+			String[] tmp = h.split("=");
+			if (tmp[0].equals(targetParam)) {
+				form += "<input id=\"inject\" name=\"" + tmp[0] + "\" value=\"\" type=\"text\" />";
+				flag = true;
+			} else 
+				form += "<input name=\"" + tmp[0] + "\" value=\"" + tmp[1] + "\" type=\"hidden\" />";
+		}
+		
+		if (!flag){
+			Debug.printError("ERROR: the target parameter is not present in the POST parameters");
+            HaltHandler.quit_nok();
+		}
+		
+		for (String h : params){
+			String[] tmp = h.split("=");
+			
+			if (tmp[0].contains("submit")) {
+				element_to_click = "submit_snuck";
+				form += "<input name=\"" + element_to_click + "\" type=\"submit\" /></form>";
+			} 
+		}
+		
+		if (!element_to_click.equals("submit_snuck"))
+			form += "<input name=\"" + element_to_click + "\" type=\"submit\" /></form>";
+
+		Server.configureServer(form);		
+		
+		String xmlConfig = "<root>\n" +
+							"	<post>\n" +
+							"		<parameters>\n" +
+							"			<commands>\n" +
+							"				<command>\n" +
+							"					<name>open</name>\n" +
+							"					<target>http://localhost:9000</target>\n" +
+							"					<value></value>\n" +
+							"				</command>\n" +
+							"				<command>\n" +
+							"					<name>type</name>\n" +
+							"					<target>id=inject</target>\n" +
+							"					<value>${INJECTION}</value>\n" +
+							"				</command>\n" +
+							"				<command>\n" +
+							"					<name>click</name>\n" +
+							"					<target>name=" + element_to_click + "</target>\n" +
+							"					<value></value>\n" +
+							"				</command>\n" +
+							"			</commands>\n" +
+							"		</parameters>\n" +
+							"	</post>\n" +
+							"</root>\n";
+		
+		return xmlConfig;
 	}
 }
