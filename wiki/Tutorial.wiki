@@ -2,8 +2,8 @@
 
 = Tutorial =
 
-*snuck* is an automated tool that may definitely help in finding XSS vulnerabilities in web applications. It is based on Selenium and supports Mozilla Firefox, Google Chrome and Internet Explorer.
-The approach, it adopts, is based on the inspection of the injection's reflection context and relies on a set of specialized and obfuscated attack vectors for filter evasion. In addition, XSS testing is performed in-browser, a real web browser is driven for reproducing the attacker's behavior and possibly the victim's.
+*snuck* is an automated tool that can definitely help in finding XSS vulnerabilities in web applications. It is based on Selenium and supports Mozilla Firefox, Google Chrome and Internet Explorer.
+The approach, it adopts, is based on the inspection of the injection's reflection context and relies on a set of specialized and obfuscated attack vectors for filter evasion. In addition, XSS testing is performed in-browser, a real web browser is driven in reproducing the attacker and possibly the victim's behavior.
 
 = Description =
 
