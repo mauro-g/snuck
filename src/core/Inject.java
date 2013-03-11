@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
@@ -360,7 +360,7 @@ public class Inject {
 				Starter.inject(anchor_vector);
 				
 				List<WebElement> link =  Starter.getDriver().findElements(By.linkText(linkText));  
-				List<WebElement> link2 =  Starter.getDriver().findElements(By.xpath("//a[@href='" + StringEscapeUtils.unescapeHtml(current) + "']"));  
+				List<WebElement> link2 =  Starter.getDriver().findElements(By.xpath("//a[@href='" + StringEscapeUtils.unescapeHtml4(current) + "']"));  
 				
 				if (Starter.getOperation() == 1)
 					getAlertsWithTimeout(null, false);
@@ -469,10 +469,10 @@ public class Inject {
 					getAlertsWithTimeout(current, true);
 				} else if (link2.size() != 0 
 							  && ( 
-									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("javascript") || 
-									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("data") || 
-									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("feed") || 
-									StringEscapeUtils.unescapeHtml(link2.get(0).getAttribute("href")).startsWith("vbscript") )
+									StringEscapeUtils.unescapeHtml4(link2.get(0).getAttribute("href")).startsWith("javascript") || 
+									StringEscapeUtils.unescapeHtml4(link2.get(0).getAttribute("href")).startsWith("data") || 
+									StringEscapeUtils.unescapeHtml4(link2.get(0).getAttribute("href")).startsWith("feed") || 
+									StringEscapeUtils.unescapeHtml4(link2.get(0).getAttribute("href")).startsWith("vbscript") )
 								){
 					link2.get(0).click();
 						
