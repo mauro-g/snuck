@@ -494,6 +494,9 @@ public class XmlConfigReader {
 	}
 	
 	public static LinkedList<String> getQueryMap(String query) {  
+		if (query == null)
+			return new LinkedList<String>();
+					
 	    String[] params = query.split("&");  
 	    LinkedList<String> parameters = new LinkedList<String>();
 
