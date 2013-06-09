@@ -57,7 +57,7 @@ public class Proxy {
 			server.start();
 		} catch (Exception e) {
 			Debug.printError("\nERROR: unable to start browsermob proxy server");
-			Starter.brokenPage();
+			Starter.detectedError();
 		}
 
 		org.openqa.selenium.Proxy proxy = null;
@@ -65,7 +65,7 @@ public class Proxy {
 			proxy = server.seleniumProxy();
 		} catch (UnknownHostException e) {
 			Debug.printError("\nERROR: unable to get the selenium proxy object");
-			Starter.brokenPage();
+			Starter.detectedError();
 		}
 
 		// configure it as a desired capability
@@ -89,7 +89,7 @@ public class Proxy {
                  if (request instanceof org.apache.http.client.methods.HttpUriRequest) {
                      org.apache.http.client.methods.HttpUriRequest r = (org.apache.http.client.methods.HttpUriRequest) request;
                      // org.apache.http.HttpHost host = (org.apache.http.HttpHost) context.getAttribute("http.target_host");
-                     
+                 
                      for (String h : http_request.getHeaders().keySet()){
                     	 if (h.equals("Content-Length")){
                     		 continue;
@@ -102,11 +102,12 @@ public class Proxy {
                     	 }
                      }
                   
-                     for (Header j : r.getAllHeaders()){
-                    	 if (http_request.getHeader(j.getName()) == null){
-                    		 r.removeHeaders(j.getName());
-                    	 }
-                     }
+                     if (!http_request.getMethod().equals("POST") || http_request.getParameters() == null)
+	                     for (Header j : r.getAllHeaders()){
+	                    	 if (http_request.getHeader(j.getName()) == null){
+	                    		 r.removeHeaders(j.getName());
+	                    	 }
+	                     }
 
                      /*
                      System.out.println("Host = " + host.getHostName());

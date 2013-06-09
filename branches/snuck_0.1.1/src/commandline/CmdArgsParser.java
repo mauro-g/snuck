@@ -222,7 +222,7 @@ public class CmdArgsParser {
 		            } else if (arg.equals("-u")){
 		            	if (i != args.length - 1 && !args[i+1].startsWith("-")) {
 		            		if (!args[i+1].startsWith("http://") && !args[i+1].startsWith("https://")){
-		            			Debug.printError("ERROR: -u requires a target URL that starts with http(s?)://");
+		            			Debug.printError("ERROR: -u requires a target URL starting with http(s?)://");
 			                    HaltHandler.quit_nok();
 		            		}
 		            			
@@ -274,7 +274,7 @@ public class CmdArgsParser {
 						
 			if (http_request != null){
 				if (configfile != null || start_configfile != null || proxyIP_port != null || cookie != null || targetURL != null || post_parameters != null){
-					Debug.printError("ERROR: -r cannot be used with -config or -start or -proxy or -cookie or -u or -data");
+					Debug.printError("ERROR: -r cannot be used with -config, -start, -proxy, -cookie, -u or -data");
 	                HaltHandler.quit_nok();
 				} else {
 					if (http_request.getParameter(targetParam) != null)
@@ -290,15 +290,17 @@ public class CmdArgsParser {
 				if (targetURL == null || targetParam == null){
 					Debug.printError("ERROR: -data must be associated to a target url (-u) and a target parameter (-p)");
 	                HaltHandler.quit_nok();
-				} else {						
+				} else if (configfile != null || start_configfile != null){
+					Debug.printError("ERROR: -data cannot be used with -config, -start");
+	                HaltHandler.quit_nok();
+				} else 					
 					writeXmlFileFromPostParameters(post_parameters, targetURL, targetParam);
-				}
 			}
 			
 			if (targetURL != null && targetParam == null){
 				Debug.printError("INFO: -u should be associated to an HTTP GET parameter (-p argument).\n" +
-								 "\tThe injection will be positioned at the end of the current path in the form of: http://target.foo/injection.\n" +
-								 "\tNote that supplied HTTP GET parameters won't be considered.");
+								 "The injection will be positioned at the end of the current path in the form of: http://target.foo/injection.\n" +
+								 "Note that supplied HTTP GET parameters won't be considered.\n");
                 
 				writeXmlFile(targetURL, "");    
 			} else if (targetURL == null && targetParam != null){
@@ -348,7 +350,7 @@ public class CmdArgsParser {
 			}
 			
 			if (configfile == null || reportfile == null) {
-				Debug.printError(usage);
+				Debug.printError("ERROR: missing -report argument");
 				HaltHandler.quit_ok();
 			} else {
 				Debug.print("INFO: If [!] is shown during a test, then a bypass has been detected");

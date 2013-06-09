@@ -36,7 +36,8 @@ public class HttpRequestParser {
 	private String file_name;
 	
 	private String cannot_read_error = "ERROR: unable to read the HTTP request file";
-	
+	private String no_host_error = "ERROR: there is no Host header in the HTTP request";
+
 	public HttpRequestParser(String http_request_filename) {
 		InputStream is = null;
 		
@@ -70,7 +71,7 @@ public class HttpRequestParser {
 	    method = basic[0];
     	url = basic[1];
     	parseHeaders();
-	
+
     	try {
 			reader.close();
 		} catch (IOException e) {
@@ -106,6 +107,14 @@ public class HttpRequestParser {
 			}
 	    }
 	    
+	    if (!headers.containsKey("host") && !headers.containsKey("Host")){
+	    	Debug.printError(no_host_error);
+    		HaltHandler.quit_nok();
+	    } else {
+	    	String host = headers.get("Host") != null ? headers.get("Host") : headers.get("host");
+	    	url = "http://" + host + url;
+	    }
+	    
 	    if (this.getMethod().equals("POST"))
 	    	parsePostParameters();
 	    else
@@ -113,7 +122,7 @@ public class HttpRequestParser {
 	}
 	
 	private void parseGetParameters() {
-		if (url.split("\\?").length != 0){
+		if (url.split("\\?").length > 1){
 			String[] params = url.split("\\?")[1].split("&");  
 			
 			for (String param : params) {  
