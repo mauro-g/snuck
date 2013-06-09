@@ -221,7 +221,7 @@ public class Starter  {
 			} else 
 				driverFast = new HtmlUnitDriver();
 	    	
-	    	//driverFast = setThrowExceptionOnScriptError(driverFast);
+	    	driverFast = setThrowExceptionOnScriptError(driverFast);
 	    	
 	    	if (parseArgs.getCookie() != null){
 	    		setCookies(driverFast, parseArgs.getCookie());
