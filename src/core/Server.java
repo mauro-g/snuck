@@ -38,8 +38,10 @@ public class Server extends Thread {
 	private static String response;
 	private static HttpServer server;
 	
+	static int PORT_NUMBER = 9000;
+	
 	public static void configureServer(String response) {
-		int portNumber = 9000;
+		int portNumber = PORT_NUMBER;
 		InetSocketAddress port = new InetSocketAddress(portNumber);
 		try {
 			server = HttpServer.create(port, 0);

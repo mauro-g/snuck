@@ -44,6 +44,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 
 import commandline.Debug;
@@ -359,7 +360,12 @@ public class Inject {
 				
 				Starter.inject(anchor_vector);
 				
-				List<WebElement> link =  Starter.getDriver().findElements(By.linkText(linkText));  
+				List<WebElement> link = null;
+				try {
+					link =  Starter.getDriver().findElements(By.linkText(linkText));  
+				} catch (WebDriverException e) {
+					link = new LinkedList<WebElement>();
+				}
 				List<WebElement> link2 =  Starter.getDriver().findElements(By.xpath("//a[@href='" + StringEscapeUtils.unescapeHtml4(current) + "']"));  
 				
 				if (Starter.getOperation() == 1)

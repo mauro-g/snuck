@@ -184,7 +184,7 @@ public class Starter  {
     											allowedProtocols, detectedXSSVectors, weakFilter, false, xmlConfig.getMethod(),
     											parseArgs.getHttpRequest(), parseArgs.getPostParameters());
     	
-    	Debug.print("\nThe malicious test has finished. A report has been generated: " + parseArgs.getReportfileName());
+    	Debug.print("\nThe injection process has finished. A report has been generated: " + parseArgs.getReportfileName());
 
     	if (parseArgs.getShowVectors() && detectedXSSVectors.size() != 0){
     		Debug.print("\nSuccessful attack vectors:\n");
@@ -221,7 +221,7 @@ public class Starter  {
 			} else 
 				driverFast = new HtmlUnitDriver();
 	    	
-	    	driverFast = setThrowExceptionOnScriptError(driverFast);
+	    	//driverFast = setThrowExceptionOnScriptError(driverFast);
 	    	
 	    	if (parseArgs.getCookie() != null){
 	    		setCookies(driverFast, parseArgs.getCookie());
@@ -250,6 +250,9 @@ public class Starter  {
 	 */
 	private static void setupDriver(){
 		if (parseArgs.getHttpRequest() != null){
+			if (parseArgs.getEnabledIE() || parseArgs.getChromeDriverPath() != null)
+				Debug.print("\nINFO: -r is enabled for Firefox only\n");
+			
     		driver = Proxy.createProxedDriver(parseArgs.getHttpRequest(), 1);
     		usedBrowser = "Mozilla Firefox";
     	} else {
@@ -271,12 +274,12 @@ public class Starter  {
 	    		// disable the built-in Chrome XSS filter
 	    		DesiredCapabilities capabilities = DesiredCapabilities.chrome();
 	    		capabilities.setCapability("chrome.switches", Arrays.asList("--disable-xss-auditor", "--disable-extensions"));
-	
+	    		
 	        	if (parseArgs.getProxyInfo() != null)
 	        		capabilities.setCapability("chrome.switches", Arrays.asList("--proxy-server=" + parseArgs.getProxyInfo()));
 	
 	    		driver = new RemoteWebDriver(service.getUrl(), capabilities);
-	    		
+
 	    		usedBrowser = "Google Chrome";
 	    	} else if (parseArgs.getEnabledIE()) {
 	    		
@@ -587,7 +590,7 @@ public class Starter  {
 	        }
 	        
         }
-                
+		
 		if (!flag){
 			inject.injectDummyAttribute();
 			flag = true;
@@ -863,7 +866,7 @@ public class Starter  {
 	private static boolean isReflected() {
 		// alphanumeric string
 		injectFast(injection);
-				
+
 		if (driverFast.getPageSource().contains(injection) || driverFast.getPageSource().contains(injection.toLowerCase()))
 			return true;
 		
@@ -990,6 +993,19 @@ public class Starter  {
 		return shutdown_hook;
 	}
 	
+	public static void detectedError() {
+		if (driverFast != null)
+			driverFast.quit();
+		
+    	if (driver != null)
+    		driver.quit();	
+    	
+    	if (parseArgs.getHttpRequest() != null || parseArgs.getPostParameters() != null)
+    		Server.stopServer();
+    	
+    	HaltHandler.quit_nok();
+	}
+	
 	public static void brokenPage() {
 		if (reflectionContext != null) {
 			report.ReportGenerator.generateReport(parseArgs.getReportfileName(), parseArgs.getConfigfileName(), usedBrowser, 
@@ -1036,6 +1052,7 @@ public class Starter  {
     	HaltHandler.quit_ok();
 	}
 	
+	@SuppressWarnings("deprecation")
 	public static WebDriver setThrowExceptionOnScriptError(WebDriver driver) {
 
 		try {

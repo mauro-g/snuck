@@ -332,6 +332,8 @@ public class XmlConfigReader {
 				 * 
 				 * Note that the injection is obviously url-encoded two times! 
 				 */
+				
+				
 				if (Starter.getCurrentBrowser() != null && Starter.getCurrentBrowser().contains("Chrome") && ( GetReflectionUrl() == null || GetReflectionUrl().equals("") ) ){
 					try {
 						NavigateTo(driver, "data:text/html,<a href='" + URLEncoder.encode(target_url, "UTF-8") + "'>go</click>");
@@ -419,7 +421,7 @@ public class XmlConfigReader {
 									ele.sendKeys((injection != null) ? injection : "");
 								else 
 									ele.sendKeys(Parameters.get(value.toLowerCase().replace("$", "").replace("{", "").replace("}", "")));
-								
+							
 							} else if (value.equals("")){
 								ele.clear();
 							} else 
@@ -533,7 +535,7 @@ public class XmlConfigReader {
 				form += "<input name=\"" + element_to_click + "\" type=\"submit\" /></form>";
 
 			Server.configureServer(form);
-			
+
 			String xmlConfig = "<root>\n" +
 								"	<post>\n" +
 								"		<parameters>\n" +
@@ -607,11 +609,12 @@ public class XmlConfigReader {
 		
 		for (String h : params){
 			String[] tmp = h.split("=");
+
 			if (tmp[0].equals(targetParam)) {
 				form += "<input id=\"inject\" name=\"" + tmp[0] + "\" value=\"\" type=\"text\" />";
 				flag = true;
 			} else 
-				form += "<input name=\"" + tmp[0] + "\" value=\"" + tmp[1] + "\" type=\"hidden\" />";
+				form += "<input name=\"" + tmp[0] + "\" value=\"" + ( tmp.length == 2 ? tmp[1] : "" ) + "\" type=\"hidden\" />";
 		}
 		
 		if (!flag){
@@ -632,7 +635,7 @@ public class XmlConfigReader {
 			form += "<input name=\"" + element_to_click + "\" type=\"submit\" /></form>";
 
 		Server.configureServer(form);		
-		
+
 		String xmlConfig = "<root>\n" +
 							"	<post>\n" +
 							"		<parameters>\n" +

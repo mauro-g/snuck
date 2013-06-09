@@ -6,11 +6,11 @@
     <property name="source" value="1.6"/>
     <path id="snuck.classpath">
         <pathelement location="bin"/>
-        <pathelement location="lib/selenium-java-2.31.0.jar"/>
-        <pathelement location="lib/htmlunit-2.11.jar"/>
+        <pathelement location="lib/selenium-java-2.32.0.jar"/>
+        <pathelement location="lib/htmlunit-2.12.jar"/>
         <pathelement location="lib/commons-lang3-3.1.jar"/>
         <pathelement location="lib/guava-14.0.jar"/>
-        <pathelement location="lib/htmlunit-core-js-2.11.jar"/>
+        <pathelement location="lib/htmlunit-core-js-2.12.jar"/>
         <pathelement location="lib/commons-io-2.2.jar"/>
         <pathelement location="lib/commons-codec-1.6.jar"/>
         <pathelement location="lib/httpclient-4.2.1.jar"/>
@@ -20,13 +20,13 @@
         <pathelement location="lib/httpcore-4.2.1.jar"/>
         <pathelement location="lib/httpmime-4.2.1.jar"/>
         <pathelement location="lib/commons-collections-3.2.1.jar"/>
-        <pathelement location="lib/cssparser-0.9.8.jar"/>
+        <pathelement location="lib/cssparser-0.9.9.jar"/>
         <pathelement location="lib/xercesImpl-2.10.0.jar"/>
         <pathelement location="lib/nekohtml-1.9.17.jar"/>
         <pathelement location="lib/xalan-2.7.1.jar"/>
         <pathelement location="lib/json-20080701.jar"/>
         <pathelement location="lib/commons-exec-1.1.jar"/>
-        <pathelement location="lib/browsermob-proxy-2.0-beta-6.jar"/>
+        <pathelement location="lib/browsermob-proxy-2.0-beta-7.jar"/>
         <pathelement location="lib/http-2.2.1.jar"/>
         <pathelement location="lib/jetty-continuation-7.3.0.v20110203.jar"/>
         <pathelement location="lib/jetty-http-7.3.0.v20110203.jar"/>
@@ -67,11 +67,11 @@
                 <attribute name="Class-Path" value="."/>
             </manifest>
             <fileset dir="bin"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/selenium-java-2.31.0.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/htmlunit-2.11.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/selenium-java-2.32.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/htmlunit-2.12.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-lang3-3.1.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/guava-14.0.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/htmlunit-core-js-2.11.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/htmlunit-core-js-2.12.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-io-2.2.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-codec-1.6.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/httpclient-4.2.1.jar"/>
@@ -81,13 +81,13 @@
             <zipfileset excludes="META-INF/*.SF" src="lib/httpcore-4.2.1.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/httpmime-4.2.1.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-collections-3.2.1.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/cssparser-0.9.8.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/cssparser-0.9.9.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/xercesImpl-2.10.0.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/nekohtml-1.9.17.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/xalan-2.7.1.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/json-20080701.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-exec-1.1.jar"/>
-	    <zipfileset excludes="META-INF/*.SF" src="lib/browsermob-proxy-2.0-beta-6.jar"/>
+	    <zipfileset excludes="META-INF/*.SF" src="lib/browsermob-proxy-2.0-beta-7.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/http-2.2.1.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/jetty-continuation-7.3.0.v20110203.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/jetty-http-7.3.0.v20110203.jar"/>
