@@ -5,7 +5,7 @@ Automatic XSS filter bypass
 snuck is an automatic tool whose goal is to significantly test a given XSS filter by specializing the injections on the basis of the reflection context. This approach adopts Selenium to drive a web browser in reproducing both the attacker and the victim behavior.
 
 #### Learn about snuck
-Visit the tutorial for further information about the tool and the user guide.
+Visit the [tutorial](https://github.com/mauro-g/snuck/wiki) for further information about the tool and the user guide.
 
 #### Research papers
 The methodology, evaluation, and implementation of snuck is described in a technical report:
